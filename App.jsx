@@ -857,7 +857,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                           <div className="font-bold text-gray-800 text-xs sm:text-sm truncate w-28">{u.name}</div>
                           <div className="text-[10px] text-gray-400 truncate w-28">{u.family.replace('ファミリー', '')}</div>
                         </td>
-{events.map(event => {
+                      {events.map(event => {
                           const status = u.responses?.[event.id] || 'undecided';
                           const comment = u.comments?.[event.id]; // コメントを取得
                           
@@ -870,11 +870,19 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                           if (status === 'tentative') { symbol = '？'; colorClass = 'text-purple-500 font-bold bg-purple-50/30'; }
 
                           return (
-                            <td key={`${u.uid}-${event.id}`} className={`px-1 py-2 text-center border-l border-gray-100 ${colorClass}`} title={comment || ''}>
+                            <td 
+                              key={`${u.uid}-${event.id}`} 
+                              className={`px-1 py-2 text-center border-l border-gray-100 ${colorClass} ${comment ? 'cursor-pointer active:opacity-50' : ''}`} 
+                              title={comment || ''}
+                              onClick={() => {
+                                // ★スマホなどでタップした時に全文字をポップアップで表示
+                                if (comment) alert(`${u.name}さんのコメント：\n${comment}`);
+                              }}
+                            >
                               <div className="flex flex-col items-center justify-center">
                                 <span>{symbol}</span>
                                 {comment && (
-                                  <span className="text-[8px] text-gray-600 bg-white/70 px-1 mt-0.5 rounded truncate w-10 sm:w-14">
+                                  <span className="text-[8px] sm:text-[9px] text-gray-600 bg-white/80 px-1.5 mt-0.5 rounded border border-gray-200 truncate w-12 sm:w-16 shadow-sm">
                                     {comment}
                                   </span>
                                 )}

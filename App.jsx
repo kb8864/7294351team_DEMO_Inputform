@@ -403,17 +403,82 @@ const AdminPanel = ({ currentEvents, onAddEvents }) => {
     }
   };
 
-  const fetchCalendarEvents = () => {
-    setIsFetching(true);
-    setTimeout(() => {
-      const currentIds = new Set(currentEvents.map(e => e.id));
-      const newCandidates = MOCK_FETCHED_EVENTS.filter(e => !currentIds.has(e.id));
-      setFetchedEvents(newCandidates);
-      const newIds = new Set(newCandidates.map(e => e.id));
-      setSelectedEventIds(newIds);
-      setIsFetching(false);
-    }, 800);
-  };
+const fetchCalendarEvents = async () => {
+  setIsFetching(true);
+  try {
+    // ⚠️ 練習班へ！ここに取得したGCPで作成したAPIキーを入れてください！APIキーを作成するにはGCPに登録が必要で、
+    // GCPの登録にはクレジットカードが必要です。基本的に無料枠で収まります。登録のためにクレジットカードが必要ということです。
+    const API_KEY = "AIzaSyAh_9XhSTvcbPgkkukoTV86IbK524mL68k"; 
+        // ⚠️ 練習班へ！ここにGoogleカレンダーIDを入れてください！
+    const CALENDAR_ID = "yt8158886636@gmail.com";
+    
+    // 期間設定：今月の1日 〜 再来月の末日
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // getMonth()+3 の "0日目" は、"再来月の末日" を指します
+    const endOfTwoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 3, 0, 23, 59, 59);
+
+    const timeMin = startOfThisMonth.toISOString();
+    const timeMax = endOfTwoMonthsLater.toISOString();
+
+    // APIリクエストURL作成
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("取得失敗");
+    
+    const data = await response.json();
+
+    // 色IDの定義 (1:ラベンダー, 5:バナナ, 6:ミカン)
+    const targetColorIds = ['1', '5', '6'];
+    
+    const currentIds = new Set(currentEvents.map(e => e.id));
+
+    // データの加工とフィルタリング
+    const newCandidates = (data.items || [])
+      .filter(event => targetColorIds.includes(event.colorId)) // 色で絞り込み
+      .map(event => {
+        // 日付・時間のフォーマット処理 (日本時間対応)
+        const startObj = new Date(event.start.dateTime || event.start.date);
+        const endObj = new Date(event.end.dateTime || event.end.date);
+        
+        const yyyy = startObj.getFullYear();
+        const mm = String(startObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(startObj.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        
+        let timeStr = '終日';
+        if (event.start.dateTime) {
+          const startH = String(startObj.getHours()).padStart(2, '0');
+          const startM = String(startObj.getMinutes()).padStart(2, '0');
+          const endH = String(endObj.getHours()).padStart(2, '0');
+          const endM = String(endObj.getMinutes()).padStart(2, '0');
+          timeStr = `${startH}:${startM}-${endH}:${endM}`;
+        }
+
+        return {
+          id: event.id,
+          title: event.summary || 'タイトルなし',
+          date: dateStr,
+          time: timeStr,
+          location: event.location || '未定'
+        };
+      })
+      .filter(e => !currentIds.has(e.id)); // 既に追加済みの予定は除外
+
+    setFetchedEvents(newCandidates);
+    
+    // 最初はすべて選択状態にする
+    const newIds = new Set(newCandidates.map(e => e.id));
+    setSelectedEventIds(newIds);
+
+  } catch (error) {
+    console.error(error);
+    alert('カレンダーの読み込みに失敗しました。APIキーなどを確認してください。');
+  } finally {
+    setIsFetching(false);
+  }
+};
 
   const toggleSelect = (id) => {
     const newSet = new Set(selectedEventIds);

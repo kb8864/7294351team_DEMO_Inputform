@@ -238,6 +238,7 @@ const STATUS_OPTIONS = {
   present: { label: '出席', color: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle2 },
   absent: { label: '欠席', color: 'bg-red-100 text-red-700 border-red-300', icon: XCircle },
   late: { label: '遅刻/早退', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: HelpCircle },
+  tentative: { label: '未確定', color: 'bg-purple-100 text-purple-700 border-purple-300', icon: HelpCircle },
   undecided: { label: '未定', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: HelpCircle },
 };
 
@@ -559,7 +560,7 @@ const StatusBadge = ({ status }) => {
 };
 
 // 4. Main Dashboard
-const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvents }) => {
+const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onLogout, onAddEvents }) => {
   const [activeTab, setActiveTab] = useState('input');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('ALL');
 
@@ -592,13 +593,26 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvent
     // return result.sort((a, b) => { ... });
   }, [allData, selectedFamilyFilter]);
 
+  //Dashboardに関数と集計を追加
+  // const getEventCounts = (eventId) => {
+  //   let counts = { present: 0, absent: 0, late: 0, undecided: 0 };
+  //   // MEMBER_LISTベースでカウント
+  //   MEMBER_LIST.forEach(member => {
+  //     const docId = `${member.family}_${member.name}`;
+  //     const status = allData[docId]?.responses?.[eventId] || 'undecided';
+  //     counts[status]++;
+  //   });
+  //   return counts;
+  // };
+
+
   const getEventCounts = (eventId) => {
-    let counts = { present: 0, absent: 0, late: 0, undecided: 0 };
+    let counts = { present: 0, absent: 0, late: 0, tentative: 0, undecided: 0 };
     // MEMBER_LISTベースでカウント
     MEMBER_LIST.forEach(member => {
       const docId = `${member.family}_${member.name}`;
       const status = allData[docId]?.responses?.[eventId] || 'undecided';
-      counts[status]++;
+      if (counts[status] !== undefined) counts[status]++;
     });
     return counts;
   };
@@ -662,7 +676,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvent
         </div>
       </header>
 
-      
+
       <main className="max-w-4xl mx-auto w-full p-4 flex-1 pb-20 safe-area-bottom">
         
         {/* --- VIEW 1: INPUT MODE --- */}
@@ -730,7 +744,29 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvent
                       <XCircle className={`w-5 h-5 sm:w-6 sm:h-6 mb-0.5 ${myStatus === 'absent' ? 'opacity-100' : 'opacity-40'}`} />
                       欠席
                     </button>
+                    <button 
+                      onClick={() => onUpdateStatus(event.id, 'tentative')}
+                      className={`py-3 sm:py-4 flex flex-col items-center justify-center gap-1 text-xs sm:text-sm font-bold transition active:bg-purple-600 active:text-white ${
+                        myStatus === 'tentative' ? 'bg-purple-500 text-white shadow-inner' : 'text-gray-500 hover:bg-purple-50'
+                      }`}
+                    >
+                      <HelpCircle className={`w-5 h-5 sm:w-6 sm:h-6 mb-0.5 ${myStatus === 'tentative' ? 'opacity-100' : 'opacity-40'}`} />
+                      未確定
+                    </button>
                   </div>
+
+                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${['late', 'absent', 'tentative'].includes(myStatus) ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="p-3 bg-indigo-50/50 border-t border-gray-100">
+                      <input 
+                        type="text"
+                        placeholder="理由や時間などを入力（任意）"
+                        defaultValue={user.comments?.[event.id] || ''}
+                        onBlur={(e) => onUpdateComment(event.id, e.target.value)}
+                        className="w-full text-sm bg-white border border-gray-200 rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+                      />
+                    </div>
+                  </div>
+
                 </div>
               );
             })}
@@ -786,6 +822,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvent
                         <span className="text-green-600">○ {counts.present}</span>
                         <span className="text-yellow-600">△ {counts.late}</span>
                         <span className="text-red-500">× {counts.absent}</span>
+                        <span className="text-purple-500">？ {counts.tentative}</span>
                       </div>
                     </div>
                   )
@@ -820,18 +857,28 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvent
                           <div className="font-bold text-gray-800 text-xs sm:text-sm truncate w-28">{u.name}</div>
                           <div className="text-[10px] text-gray-400 truncate w-28">{u.family.replace('ファミリー', '')}</div>
                         </td>
-                        {events.map(event => {
+{events.map(event => {
                           const status = u.responses?.[event.id] || 'undecided';
+                          const comment = u.comments?.[event.id]; // コメントを取得
+                          
                           let symbol = '－';
                           let colorClass = 'text-gray-300';
                           
                           if (status === 'present') { symbol = '○'; colorClass = 'text-green-600 font-bold bg-green-50/30'; }
                           if (status === 'absent') { symbol = '×'; colorClass = 'text-red-400 bg-red-50/30'; }
                           if (status === 'late') { symbol = '△'; colorClass = 'text-yellow-500 font-bold bg-yellow-50/30'; }
+                          if (status === 'tentative') { symbol = '？'; colorClass = 'text-purple-500 font-bold bg-purple-50/30'; }
 
                           return (
-                            <td key={`${u.uid}-${event.id}`} className={`px-1 py-2 text-center border-l border-gray-100 ${colorClass}`}>
-                              {symbol}
+                            <td key={`${u.uid}-${event.id}`} className={`px-1 py-2 text-center border-l border-gray-100 ${colorClass}`} title={comment || ''}>
+                              <div className="flex flex-col items-center justify-center">
+                                <span>{symbol}</span>
+                                {comment && (
+                                  <span className="text-[8px] text-gray-600 bg-white/70 px-1 mt-0.5 rounded truncate w-10 sm:w-14">
+                                    {comment}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           );
                         })}
@@ -971,6 +1018,19 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
+  // --- 追加：コメント更新用関数 ---
+  const handleUpdateComment = async (eventId, comment) => {
+    if (!user) return;
+    const newComments = { ...(user.comments || {}), [eventId]: comment };
+    setUser({ ...user, comments: newComments }); 
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), {
+        comments: newComments,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) { console.error(e); }
+  };
+
   const handleAddEvents = async (newEvents) => {
     try {
       const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
@@ -1004,6 +1064,7 @@ export default function App() {
       events={events} 
       allData={allData} 
       onUpdateStatus={handleUpdateStatus} 
+      onUpdateComment={handleUpdateComment}
       onLogout={handleLogout}
       onAddEvents={handleAddEvents}
     />

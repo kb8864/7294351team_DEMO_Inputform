@@ -612,16 +612,49 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
   //   return counts;
   // };
 
+// ★追加：ファミリー全体の回答率を計算する関数
+  const getFamilyResponseRate = (familyName) => {
+    if (events.length === 0) return 0;
+    let targetMembers = MEMBER_LIST;
+    if (familyName !== 'ALL') {
+      targetMembers = MEMBER_LIST.filter(m => m.family === familyName);
+    }
+    const totalExpected = targetMembers.length * events.length;
+    let respondedCount = 0;
+    targetMembers.forEach(m => {
+      const docId = `${m.family}_${m.name}`;
+      const userData = allData[docId];
+      if (userData && userData.responses) {
+        events.forEach(e => {
+          const status = userData.responses[e.id] || 'undecided';
+          if (status !== 'undecided') respondedCount++;
+        });
+      }
+    });
+    return Math.round((respondedCount / totalExpected) * 100) || 0;
+  };
 
+  // const getEventCounts = (eventId) => {
+  //   let counts = { present: 0, absent: 0, late: 0, tentative: 0, undecided: 0 };
+  //   // MEMBER_LISTベースでカウント
+  //   MEMBER_LIST.forEach(member => {
+  //     const docId = `${member.family}_${member.name}`;
+  //     const status = allData[docId]?.responses?.[eventId] || 'undecided';
+  //     if (counts[status] !== undefined) counts[status]++;
+  //   });
+  //   return counts;
+  // };
+  //日付ごとのカウントを、フィルターされたメンバーベースに変更し、パーセントも返す
   const getEventCounts = (eventId) => {
     let counts = { present: 0, absent: 0, late: 0, tentative: 0, undecided: 0 };
-    // MEMBER_LISTベースでカウント
-    MEMBER_LIST.forEach(member => {
-      const docId = `${member.family}_${member.name}`;
-      const status = allData[docId]?.responses?.[eventId] || 'undecided';
+    filteredUsers.forEach(u => {
+      const status = u.responses?.[eventId] || 'undecided';
       if (counts[status] !== undefined) counts[status]++;
     });
-    return counts;
+    const total = filteredUsers.length;
+    const responded = total - counts.undecided;
+    const rate = total > 0 ? Math.round((responded / total) * 100) : 0;
+    return { ...counts, rate, total };
   };
 
   return (
@@ -783,14 +816,14 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
         {/* --- VIEW 2: LIST MODE --- */}
         {activeTab === 'list' && (
           <div className="space-y-5">
-            {/* Horizontal Scrolling Filter */}
+{/* Horizontal Scrolling Filter */}
             <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-200">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
                 <Filter className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
 
                 <button
                   onClick={() => setSelectedFamilyFilter('COMMENTED')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0 flex items-center gap-1 ${
+                  className={`px-3 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition shrink-0 flex items-center justify-center gap-1 ${
                     selectedFamilyFilter === 'COMMENTED' 
                       ? 'bg-purple-600 text-white shadow-md' 
                       : 'bg-purple-50 text-purple-600 border border-purple-100'
@@ -799,29 +832,48 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                   💬 コメントあり
                 </button>
                 
+                {/* ★全員ボタン（プログレスバー付き） */}
                 <button
                   onClick={() => setSelectedFamilyFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex flex-col items-center gap-1 ${
                     selectedFamilyFilter === 'ALL' 
                       ? 'bg-gray-800 text-white shadow-md' 
                       : 'bg-gray-100 text-gray-600'
                   }`}
                 >
-                  全員
+                  <span>全員</span>
+                  <div className="flex items-center gap-1 w-full opacity-90">
+                    <div className={`w-10 h-1.5 rounded-full overflow-hidden ${selectedFamilyFilter === 'ALL' ? 'bg-gray-600' : 'bg-gray-300'}`}>
+                      <div className="h-full bg-green-400 transition-all" style={{ width: `${getFamilyResponseRate('ALL')}%` }} />
+                    </div>
+                    <span className="text-[8px] leading-none font-normal">{getFamilyResponseRate('ALL')}%</span>
+                  </div>
                 </button>
-                {FAMILIES.map(fam => (
-                  <button
-                    key={fam}
-                    onClick={() => setSelectedFamilyFilter(fam)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0 ${
-                      selectedFamilyFilter === fam 
-                        ? 'bg-indigo-600 text-white shadow-md' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {fam.replace('ファミリー', '')}
-                  </button>
-                ))}
+
+                {/* ★各ファミリーボタン（プログレスバー付き） */}
+                {FAMILIES.map(fam => {
+                  const rate = getFamilyResponseRate(fam);
+                  const isSelected = selectedFamilyFilter === fam;
+                  return (
+                    <button
+                      key={fam}
+                      onClick={() => setSelectedFamilyFilter(fam)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex flex-col items-center gap-1 ${
+                        isSelected 
+                          ? 'bg-indigo-600 text-white shadow-md' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      <span>{fam.replace('ファミリー', '')}</span>
+                      <div className="flex items-center gap-1 w-full opacity-90">
+                        <div className={`w-10 h-1.5 rounded-full overflow-hidden ${isSelected ? 'bg-indigo-400' : 'bg-gray-300'}`}>
+                          <div className="h-full bg-green-400 transition-all" style={{ width: `${rate}%` }} />
+                        </div>
+                        <span className="text-[8px] leading-none font-normal">{rate}%</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -832,12 +884,22 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                   const counts = getEventCounts(event.id);
                   const { dayStr, colorClass } = getDayInfo(event.date);
                   return (
-                    <div key={event.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 w-44 shrink-0">
+<div key={event.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 w-44 shrink-0">
                       <div className={`text-[10px] mb-1 font-bold inline-block px-1.5 py-0.5 rounded ${colorClass}`}>
                         {event.date.slice(5)} {dayStr} {event.time.split('-')[0]}~
                       </div>
-                      <div className="text-xs font-bold text-gray-800 truncate mb-2 mt-1">{event.title}</div>
-                      <div className="flex justify-between text-[10px] font-bold">
+                      <div className="text-xs font-bold text-gray-800 truncate mb-1.5">{event.title}</div>
+                      
+                      {/* ★追加：日付ごとの回答率プログレスバー */}
+                      <div className="mb-2 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+                        <div className="flex justify-between text-[9px] text-gray-500 mb-1">
+                          <span>回答率</span>
+                          <span className="font-bold text-indigo-600">{counts.rate}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${counts.rate}%` }} />
+                        </div>
+                      </div>                      <div className="flex justify-between text-[10px] font-bold">
                         <span className="text-green-600">○ {counts.present}</span>
                         <span className="text-yellow-600">△ {counts.late}</span>
                         <span className="text-red-500">× {counts.absent}</span>

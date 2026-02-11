@@ -35,13 +35,13 @@ import {
 
 // --- Firebase Initialization ---
 const firebaseConfig = {
-  apiKey: "AIzaSyDDHKlSSC3UcBWgiN-TPjo76Ah97ciK7Vw",
-  authDomain: "sample-293b1.firebaseapp.com",
-  projectId: "sample-293b1",
-  storageBucket: "sample-293b1.firebasestorage.app",
-  messagingSenderId: "814788555901",
-  appId: "1:814788555901:web:60dd655faa09e4fc39ed14",
-  measurementId: "G-STEH5KKY28"
+  apiKey: "AIzaSyDDHKlSSC3UcBWgiN-TPjo76Ah97ciK7Vw",
+  authDomain: "sample-293b1.firebaseapp.com",
+  projectId: "sample-293b1",
+  storageBucket: "sample-293b1.firebasestorage.app",
+  messagingSenderId: "814788555901",
+  appId: "1:814788555901:web:60dd655faa09e4fc39ed14",
+  measurementId: "G-STEH5KKY28"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -282,25 +282,23 @@ const LS_USER_ID_KEY = `yosakoi_app_user_id_${appId}`;
 
 // 1. Auth Screen (List Selection Only)
 const AuthScreen = ({ onLogin }) => {
-  const [family, setFamily] = useState(FAMILIES[0]);
+  // 変更点: 初期値を空文字（未選択）に変更
+  const [family, setFamily] = useState('');
   const [selectedName, setSelectedName] = useState('');
 
   // Filter members from constant list
   const familyMembers = useMemo(() => {
+    // 変更点: ファミリー未選択時は空のリストを返す
+    if (!family) return [];
+    
     return MEMBER_LIST
       .filter(m => m.family === family)
-      .sort((a, b) => {
-         // 元のリスト順（=ファミリーの並び順）を維持したい場合はsortを外す
-         // ここでは見つけやすいように50音順ソートを入れていますが、
-         // リーダーを先頭にしたい場合はソートを外してください。
-         // 今回はリーダーが先頭にいるようなので、ソートなし（リスト順）に変更します。
-         return 0; 
-      });
+      .sort((a, b) => 0); 
   }, [family]);
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    if (selectedName) {
+    if (family && selectedName) {
       onLogin(family, selectedName);
     }
   };
@@ -333,6 +331,8 @@ const AuthScreen = ({ onLogin }) => {
                 }}
                 className="block w-full rounded-xl border-gray-200 border p-3 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none font-bold text-gray-700"
               >
+                {/* 変更点: 初期選択用の空オプションを追加 */}
+                <option value="">▼ ファミリーを選択</option>
                 {FAMILIES.map((f) => (
                   <option key={f} value={f}>{f}</option>
                 ))}
@@ -344,11 +344,21 @@ const AuthScreen = ({ onLogin }) => {
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">名前を選択</label>
             <div className="relative">
+              
+              {/* 変更点: ファミリー未選択時にクリックするとアラートを出す透明レイヤー */}
+              {!family && (
+                <div 
+                  className="absolute inset-0 z-10" 
+                  onClick={() => alert("先にファミリーを選択してください！")}
+                />
+              )}
+
               <select
                 value={selectedName}
                 onChange={(e) => setSelectedName(e.target.value)}
-                disabled={familyMembers.length === 0}
-                className="block w-full rounded-xl border-gray-200 border p-3 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none font-bold text-gray-700 disabled:opacity-50"
+                // 変更点: ファミリー未選択時は無効化（ただし上のdivがクリックを拾う）
+                disabled={!family} 
+                className="block w-full rounded-xl border-gray-200 border p-3 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none font-bold text-gray-700 disabled:opacity-50 disabled:bg-gray-100"
               >
                 <option value="">あなたの名前を選択</option>
                 {familyMembers.map((m) => (
@@ -357,14 +367,14 @@ const AuthScreen = ({ onLogin }) => {
               </select>
               <ChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-gray-400 pointer-events-none" />
             </div>
-            {familyMembers.length === 0 && (
+            {family && familyMembers.length === 0 && (
                <p className="text-[10px] text-red-400 mt-1">※名簿データがありません。管理者に連絡してください。</p>
             )}
           </div>
 
           <button
             type="submit"
-            disabled={!selectedName}
+            disabled={!family || !selectedName}
             className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-indigo-200"
           >
             ログイン

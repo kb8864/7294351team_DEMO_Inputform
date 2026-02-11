@@ -499,6 +499,19 @@ const fetchCalendarEvents = async () => {
     alert(`${eventsToAdd.length}件の予定を追加しました`);
   };
 
+  const handleDeleteAllEvents = async () => {
+    if (window.confirm("現在公開されているすべての予定を削除しますか？\n（この操作は元に戻せません）")) {
+      try {
+        const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
+        await setDoc(eventsRef, { items: [] }); // データベースの予定を空っぽで上書きする
+        alert("すべての予定を削除しました。");
+      } catch (e) {
+        console.error(e);
+        alert("削除に失敗しました。");
+      }
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4">
@@ -588,8 +601,18 @@ const fetchCalendarEvents = async () => {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <h3 className="font-bold text-gray-800 mb-4 text-sm">公開中の日程</h3>
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-bold text-gray-800 text-sm">公開中の日程</h3>
+          {currentEvents.length > 0 && (
+            <button 
+              onClick={handleDeleteAllEvents}
+              className="text-xs text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition active:scale-95"
+            >
+              全件削除
+            </button>
+          )}
+        </div>
         <div className="space-y-2">
           {currentEvents.length === 0 ? (
             <p className="text-gray-400 text-sm">予定はまだありません</p>
@@ -1094,8 +1117,8 @@ export default function App() {
             items.sort((a, b) => new Date(`${a.date} ${a.time.split('-')[0]}`) - new Date(`${b.date} ${b.time.split('-')[0]}`));
             setEvents(items);
           } else {
-            setDoc(eventsRef, { items: INITIAL_EVENTS });
-            setEvents(INITIAL_EVENTS);
+            setDoc(eventsRef, { items: [] });
+            setEvents([]);
           }
         });
 

@@ -428,6 +428,8 @@ const fetchCalendarEvents = async () => {
     if (!response.ok) throw new Error("取得失敗");
     
     const data = await response.json();
+    // API通信テスト用
+    console.log("★★Googleから届いた生データ★★:", data.items); 
 
     // 色IDの定義 (1:ラベンダー, 5:バナナ, 6:ミカン)
     const targetColorIds = ['1', '5', '6'];
@@ -436,7 +438,7 @@ const fetchCalendarEvents = async () => {
 
     // データの加工とフィルタリング
     const newCandidates = (data.items || [])
-      .filter(event => targetColorIds.includes(event.colorId)) // 色で絞り込み
+      //.filter(event => targetColorIds.includes(event.colorId)) // 色で絞り込み
       .map(event => {
         // 日付・時間のフォーマット処理 (日本時間対応)
         const startObj = new Date(event.start.dateTime || event.start.date);

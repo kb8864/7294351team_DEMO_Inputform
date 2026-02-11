@@ -35,7 +35,7 @@ import {
 
 // --- Firebase Initialization ---
 const firebaseConfig = {
-  apiKey: "AIzaSyDDHKlSSC3UcBWgiN-TPjo76Ah97ciK7Vw",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "sample-293b1.firebaseapp.com",
   projectId: "sample-293b1",
   storageBucket: "sample-293b1.firebasestorage.app",
@@ -245,18 +245,18 @@ const STATUS_OPTIONS = {
 const ADMIN_PASSWORD = "yosakoi"; 
 
 // 初期データ用モック
-const INITIAL_EVENTS = [
-  { id: 'evt-001', title: '全体練習 第1部', date: '2024-05-18', time: '13:00-15:00', location: '〇〇体育館 メイン' },
-  { id: 'evt-002', title: '全体練習 第2部', date: '2024-05-18', time: '15:30-17:30', location: '〇〇体育館 メイン' },
-];
+// const INITIAL_EVENTS = [
+//   { id: 'evt-001', title: '全体練習 第1部', date: '2024-05-18', time: '13:00-15:00', location: '〇〇体育館 メイン' },
+//   { id: 'evt-002', title: '全体練習 第2部', date: '2024-05-18', time: '15:30-17:30', location: '〇〇体育館 メイン' },
+// ];
 
-const MOCK_FETCHED_EVENTS = [
-  { id: 'g-001', title: '平日夜練習', date: '2024-05-22', time: '19:00-21:00', location: '△△コミュニティセンター' },
-  { id: 'g-002', title: '衣装説明会＆練習', date: '2024-05-25', time: '13:00-17:00', location: '□□ホール' },
-  { id: 'g-003', title: '強化練習 (選抜)', date: '2024-05-26', time: '09:00-12:00', location: '〇〇体育館 サブ' },
-  { id: 'g-004', title: '全体練習', date: '2024-06-01', time: '13:00-17:00', location: '未定' },
-  { id: 'g-005', title: '遠征リハーサル', date: '2024-06-08', time: '10:00-16:00', location: '市民体育館' },
-];
+// const MOCK_FETCHED_EVENTS = [
+//   { id: 'g-001', title: '平日夜練習', date: '2024-05-22', time: '19:00-21:00', location: '△△コミュニティセンター' },
+//   { id: 'g-002', title: '衣装説明会＆練習', date: '2024-05-25', time: '13:00-17:00', location: '□□ホール' },
+//   { id: 'g-003', title: '強化練習 (選抜)', date: '2024-05-26', time: '09:00-12:00', location: '〇〇体育館 サブ' },
+//   { id: 'g-004', title: '全体練習', date: '2024-06-01', time: '13:00-17:00', location: '未定' },
+//   { id: 'g-005', title: '遠征リハーサル', date: '2024-06-08', time: '10:00-16:00', location: '市民体育館' },
+// ];
 
 // --- Helper Functions ---
 const getDayInfo = (dateString) => {
@@ -408,8 +408,8 @@ const fetchCalendarEvents = async () => {
   try {
     // ⚠️ 練習班へ！ここに取得したGCPで作成したAPIキーを入れてください！APIキーを作成するにはGCPに登録が必要で、
     // GCPの登録にはクレジットカードが必要です。基本的に無料枠で収まります。登録のためにクレジットカードが必要ということです。
-    const API_KEY = "AIzaSyAh_9XhSTvcbPgkkukoTV86IbK524mL68k"; 
-        // ⚠️ 練習班へ！ここにGoogleカレンダーIDを入れてください！
+    // ★Google APIキーも環境変数から取得するように修正
+    const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY; 
     const CALENDAR_ID = "yt8158886636@gmail.com";
     
     // 期間設定：今月の1日 〜 再来月の末日
@@ -429,6 +429,7 @@ const fetchCalendarEvents = async () => {
     
     const data = await response.json();
     // API通信テスト用
+    //20260211
     console.log("★★Googleから届いた生データ★★:", data.items); 
 
     // 色IDの定義 (1:ラベンダー, 5:バナナ, 6:ミカン)
@@ -438,7 +439,7 @@ const fetchCalendarEvents = async () => {
 
     // データの加工とフィルタリング
     const newCandidates = (data.items || [])
-      //.filter(event => targetColorIds.includes(event.colorId)) // 色で絞り込み
+      .filter(event => targetColorIds.includes(event.colorId)) // 色で絞り込み
       .map(event => {
         // 日付・時間のフォーマット処理 (日本時間対応)
         const startObj = new Date(event.start.dateTime || event.start.date);

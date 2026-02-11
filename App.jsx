@@ -606,22 +606,28 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvent
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Responsive Header */}
+{/* Responsive Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm safe-area-top">
         <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-1.5 rounded-lg shrink-0">
+          
+          <div className="flex items-center gap-2 shrink-0">
+            {/* スマホ画面のスペース確保のため、スマホではカレンダーアイコンを隠す */}
+            <div className="bg-indigo-600 p-1.5 rounded-lg shrink-0 hidden sm:block">
               <Calendar className="w-4 h-4 text-white" />
             </div>
-            <h1 className="font-bold text-gray-800 text-base md:text-lg truncate">よさこい出欠</h1>
+            <h1 className="font-bold text-gray-800 text-sm sm:text-base md:text-lg truncate">よさこい出欠</h1>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="text-right hidden sm:block">
-              <div className="text-[10px] text-gray-500">{user.family}</div>
-              <div className="text-xs font-bold text-gray-800">{user.name}</div>
+
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            {/* 変更点：hidden sm:block を外してスマホでも表示。フォントを大きくして色付け */}
+            <div className="text-right min-w-0">
+              <div className="text-[10px] sm:text-xs text-gray-500 truncate">{user.family}</div>
+              <div className="text-sm sm:text-base font-bold text-indigo-700 truncate">{user.name}</div>
             </div>
+            
             <button 
               onClick={onLogout}
-              className="flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:gap-1 sm:px-3 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
+              className="flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:gap-1 sm:px-3 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition shrink-0"
               title="ログアウト"
             >
               <LogOut className="w-4 h-4" />
@@ -656,6 +662,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onLogout, onAddEvent
         </div>
       </header>
 
+      
       <main className="max-w-4xl mx-auto w-full p-4 flex-1 pb-20 safe-area-bottom">
         
         {/* --- VIEW 1: INPUT MODE --- */}

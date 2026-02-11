@@ -585,10 +585,17 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
     });
 
     let result = mergedList;
-    if (selectedFamilyFilter !== 'ALL') {
+    //選択されたフィルターが「COMMENTED」なら、コメントがある人のみ残す
+    if (selectedFamilyFilter === 'COMMENTED') {
+      result = result.filter(u => {
+        if (!u.comments) return false;
+        // 何かしらのコメントが空文字以外で入力されているかチェック
+        return Object.values(u.comments).some(c => c && c.trim() !== '');
+      });
+    } else if (selectedFamilyFilter !== 'ALL') {
       result = result.filter(u => u.family === selectedFamilyFilter);
     }
-    return result; 
+    return result;
     // ソートを削除（リストの順序を維持）
     // return result.sort((a, b) => { ... });
   }, [allData, selectedFamilyFilter]);

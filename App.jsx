@@ -35,7 +35,7 @@ import {
 
 // --- Firebase Initialization ---
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  apiKey: "AIzaSyDDHKlSSC3UcBWgiN-TPjo76Ah97ciK7Vw",
   authDomain: "sample-293b1.firebaseapp.com",
   projectId: "sample-293b1",
   storageBucket: "sample-293b1.firebasestorage.app",
@@ -408,8 +408,8 @@ const fetchCalendarEvents = async () => {
   try {
     // ⚠️ 練習班へ！ここに取得したGCPで作成したAPIキーを入れてください！APIキーを作成するにはGCPに登録が必要で、
     // GCPの登録にはクレジットカードが必要です。基本的に無料枠で収まります。登録のためにクレジットカードが必要ということです。
-    // ★Google APIキーも環境変数から取得するように修正
-    const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY; 
+     const API_KEY = "AIzaSyAh_9XhSTvcbPgkkukoTV86IbK524mL68k"; 
+        // ⚠️ 練習班へ！ここにGoogleカレンダーIDを入れてください！
     const CALENDAR_ID = "yt8158886636@gmail.com";
     
     // 期間設定：今月の1日 〜 再来月の末日

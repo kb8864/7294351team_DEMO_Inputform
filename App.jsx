@@ -787,6 +787,18 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
             <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-200">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
                 <Filter className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
+
+                <button
+                  onClick={() => setSelectedFamilyFilter('COMMENTED')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0 flex items-center gap-1 ${
+                    selectedFamilyFilter === 'COMMENTED' 
+                      ? 'bg-purple-600 text-white shadow-md' 
+                      : 'bg-purple-50 text-purple-600 border border-purple-100'
+                  }`}
+                >
+                  💬 コメントあり
+                </button>
+                
                 <button
                   onClick={() => setSelectedFamilyFilter('ALL')}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0 ${

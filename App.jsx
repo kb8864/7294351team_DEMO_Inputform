@@ -244,20 +244,6 @@ const STATUS_OPTIONS = {
 
 const ADMIN_PASSWORD = "yosakoi"; 
 
-// 初期データ用モック
-// const INITIAL_EVENTS = [
-//   { id: 'evt-001', title: '全体練習 第1部', date: '2024-05-18', time: '13:00-15:00', location: '〇〇体育館 メイン' },
-//   { id: 'evt-002', title: '全体練習 第2部', date: '2024-05-18', time: '15:30-17:30', location: '〇〇体育館 メイン' },
-// ];
-
-// const MOCK_FETCHED_EVENTS = [
-//   { id: 'g-001', title: '平日夜練習', date: '2024-05-22', time: '19:00-21:00', location: '△△コミュニティセンター' },
-//   { id: 'g-002', title: '衣装説明会＆練習', date: '2024-05-25', time: '13:00-17:00', location: '□□ホール' },
-//   { id: 'g-003', title: '強化練習 (選抜)', date: '2024-05-26', time: '09:00-12:00', location: '〇〇体育館 サブ' },
-//   { id: 'g-004', title: '全体練習', date: '2024-06-01', time: '13:00-17:00', location: '未定' },
-//   { id: 'g-005', title: '遠征リハーサル', date: '2024-06-08', time: '10:00-16:00', location: '市民体育館' },
-// ];
-
 // --- Helper Functions ---
 const getDayInfo = (dateString) => {
   if (!dateString) return { dayStr: '', colorClass: 'bg-gray-100 text-gray-600' };
@@ -283,13 +269,11 @@ const LS_USER_ID_KEY = `yosakoi_app_user_id_${appId}`;
 
 // 1. Auth Screen (List Selection Only)
 const AuthScreen = ({ onLogin }) => {
-  // 変更点: 初期値を空文字（未選択）に変更
   const [family, setFamily] = useState('');
   const [selectedName, setSelectedName] = useState('');
 
   // Filter members from constant list
   const familyMembers = useMemo(() => {
-    // 変更点: ファミリー未選択時は空のリストを返す
     if (!family) return [];
     
     return MEMBER_LIST
@@ -332,7 +316,6 @@ const AuthScreen = ({ onLogin }) => {
                 }}
                 className="block w-full rounded-xl border-gray-200 border p-3 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none font-bold text-gray-700"
               >
-                {/* 変更点: 初期選択用の空オプションを追加 */}
                 <option value="">▼ ファミリーを選択</option>
                 {FAMILIES.map((f) => (
                   <option key={f} value={f}>{f}</option>
@@ -346,7 +329,6 @@ const AuthScreen = ({ onLogin }) => {
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">名前を選択</label>
             <div className="relative">
               
-              {/* 変更点: ファミリー未選択時にクリックするとアラートを出す透明レイヤー */}
               {!family && (
                 <div 
                   className="absolute inset-0 z-10" 
@@ -357,7 +339,6 @@ const AuthScreen = ({ onLogin }) => {
               <select
                 value={selectedName}
                 onChange={(e) => setSelectedName(e.target.value)}
-                // 変更点: ファミリー未選択時は無効化（ただし上のdivがクリックを拾う）
                 disabled={!family} 
                 className="block w-full rounded-xl border-gray-200 border p-3 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none font-bold text-gray-700 disabled:opacity-50 disabled:bg-gray-100"
               >
@@ -406,16 +387,12 @@ const AdminPanel = ({ currentEvents, onAddEvents }) => {
 const fetchCalendarEvents = async () => {
   setIsFetching(true);
   try {
-    // ⚠️ 練習班へ！ここに取得したGCPで作成したAPIキーを入れてください！APIキーを作成するにはGCPに登録が必要で、
-    // GCPの登録にはクレジットカードが必要です。基本的に無料枠で収まります。登録のためにクレジットカードが必要ということです。
-     const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
-        // ⚠️ 練習班へ！ここにGoogleカレンダーIDを入れてください！
+    const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
     const CALENDAR_ID = "yt8158886636@gmail.com";
     
     // 期間設定：今月の1日 〜 再来月の末日
     const now = new Date();
     const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    // getMonth()+3 の "0日目" は、"再来月の末日" を指します
     const endOfTwoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 3, 0, 23, 59, 59);
 
     const timeMin = startOfThisMonth.toISOString();
@@ -428,8 +405,6 @@ const fetchCalendarEvents = async () => {
     if (!response.ok) throw new Error("取得失敗");
     
     const data = await response.json();
-    // API通信テスト用
-    //20260211
     console.log("★★Googleから届いた生データ★★:", data.items); 
 
     // 色IDの定義 (1:ラベンダー, 5:バナナ, 6:ミカン)
@@ -443,7 +418,6 @@ const fetchCalendarEvents = async () => {
       .map(event => {
         // 日付・時間のフォーマット処理 (日本時間対応)
         const startObj = new Date(event.start.dateTime || event.start.date);
-        const endObj = new Date(event.end.dateTime || event.end.date);
         
         const yyyy = startObj.getFullYear();
         const mm = String(startObj.getMonth() + 1).padStart(2, '0');
@@ -454,6 +428,8 @@ const fetchCalendarEvents = async () => {
         if (event.start.dateTime) {
           const startH = String(startObj.getHours()).padStart(2, '0');
           const startM = String(startObj.getMinutes()).padStart(2, '0');
+          // 終了時間の計算のため、endオブジェクトも必要
+          const endObj = new Date(event.end.dateTime || event.end.date);
           const endH = String(endObj.getHours()).padStart(2, '0');
           const endM = String(endObj.getMinutes()).padStart(2, '0');
           timeStr = `${startH}:${startM}-${endH}:${endM}`;
@@ -657,10 +633,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
 
   const filteredUsers = useMemo(() => {
     let users = Object.values(allData);
-    // MEMBER_LISTにあってallDataにまだない（一度もログインしていない）人も表示した方が良いか？
-    // → 「全体一覧」では、アクティブな（一度でもログインした）メンバーだけ表示する仕様にします。
-    // もし「未ログインの人も全員×で表示したい」場合は、MEMBER_LISTをベースにallDataをマージする必要があります。
-    // 今回は「入力済みメンバーの可視化」を優先し、MEMBER_LISTベースで表示します。
     
     // Create a map of existing data
     const dataMap = allData;
@@ -676,34 +648,18 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
     });
 
     let result = mergedList;
-    //選択されたフィルターが「COMMENTED」なら、コメントがある人のみ残す
     if (selectedFamilyFilter === 'COMMENTED') {
       result = result.filter(u => {
         if (!u.comments) return false;
-        // 何かしらのコメントが空文字以外で入力されているかチェック
         return Object.values(u.comments).some(c => c && c.trim() !== '');
       });
     } else if (selectedFamilyFilter !== 'ALL') {
       result = result.filter(u => u.family === selectedFamilyFilter);
     }
     return result;
-    // ソートを削除（リストの順序を維持）
-    // return result.sort((a, b) => { ... });
   }, [allData, selectedFamilyFilter]);
 
-  //Dashboardに関数と集計を追加
-  // const getEventCounts = (eventId) => {
-  //   let counts = { present: 0, absent: 0, late: 0, undecided: 0 };
-  //   // MEMBER_LISTベースでカウント
-  //   MEMBER_LIST.forEach(member => {
-  //     const docId = `${member.family}_${member.name}`;
-  //     const status = allData[docId]?.responses?.[eventId] || 'undecided';
-  //     counts[status]++;
-  //   });
-  //   return counts;
-  // };
 
-// ★追加：ファミリー全体の回答率を計算する関数
   const getFamilyResponseRate = (familyName) => {
     if (events.length === 0) return 0;
     let targetMembers = MEMBER_LIST;
@@ -725,17 +681,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
     return Math.round((respondedCount / totalExpected) * 100) || 0;
   };
 
-  // const getEventCounts = (eventId) => {
-  //   let counts = { present: 0, absent: 0, late: 0, tentative: 0, undecided: 0 };
-  //   // MEMBER_LISTベースでカウント
-  //   MEMBER_LIST.forEach(member => {
-  //     const docId = `${member.family}_${member.name}`;
-  //     const status = allData[docId]?.responses?.[eventId] || 'undecided';
-  //     if (counts[status] !== undefined) counts[status]++;
-  //   });
-  //   return counts;
-  // };
-  //日付ごとのカウントを、フィルターされたメンバーベースに変更し、パーセントも返す
   const getEventCounts = (eventId) => {
     let counts = { present: 0, absent: 0, late: 0, tentative: 0, undecided: 0 };
     filteredUsers.forEach(u => {
@@ -750,13 +695,10 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Responsive Header */}
-{/* Responsive Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm safe-area-top">
         <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
           
           <div className="flex items-center gap-2 shrink-0">
-            {/* スマホ画面のスペース確保のため、スマホではカレンダーアイコンを隠す */}
             <div className="bg-indigo-600 p-1.5 rounded-lg shrink-0 hidden sm:block">
               <Calendar className="w-4 h-4 text-white" />
             </div>
@@ -764,7 +706,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            {/* 変更点：hidden sm:block を外してスマホでも表示。フォントを大きくして色付け */}
             <div className="text-right min-w-0">
               <div className="text-[10px] sm:text-xs text-gray-500 truncate">{user.family}</div>
               <div className="text-sm sm:text-base font-bold text-indigo-700 truncate">{user.name}</div>
@@ -781,7 +722,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
           </div>
         </div>
         
-        {/* Responsive Tab Switcher */}
         <div className="flex border-t border-gray-100 bg-white">
           <button 
             onClick={() => setActiveTab('input')}
@@ -832,7 +772,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                       </span>
                       <StatusBadge status={myStatus} />
                     </div>
-                    {/* Consistent font size for mobile readability */}
                     <div className="space-y-1.5">
                       <h3 className="text-base font-bold text-gray-800 leading-tight">{event.title}</h3>
                       <div className="text-sm font-bold text-gray-600 flex items-center gap-1.5">
@@ -846,7 +785,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                     </div>
                   </div>
                   
-                  {/* Large touch targets for mobile */}
                   <div className="grid grid-cols-3 divide-x divide-gray-100 bg-gray-50/50">
                     <button 
                       onClick={() => onUpdateStatus(event.id, 'present')}
@@ -907,7 +845,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
         {/* --- VIEW 2: LIST MODE --- */}
         {activeTab === 'list' && (
           <div className="space-y-5">
-{/* Horizontal Scrolling Filter */}
             <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-200">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
                 <Filter className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
@@ -923,7 +860,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                   💬 コメントあり
                 </button>
                 
-                {/* ★全員ボタン（プログレスバー付き） */}
                 <button
                   onClick={() => setSelectedFamilyFilter('ALL')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex flex-col items-center gap-1 ${
@@ -941,7 +877,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                   </div>
                 </button>
 
-                {/* ★各ファミリーボタン（プログレスバー付き） */}
                 {FAMILIES.map(fam => {
                   const rate = getFamilyResponseRate(fam);
                   const isSelected = selectedFamilyFilter === fam;
@@ -968,7 +903,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
               </div>
             </div>
 
-            {/* Event Summary Cards */}
             <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth">
               <div className="flex gap-3 w-max">
                 {events.map(event => {
@@ -981,7 +915,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                       </div>
                       <div className="text-xs font-bold text-gray-800 truncate mb-1.5">{event.title}</div>
                       
-                      {/* ★追加：日付ごとの回答率プログレスバー */}
                       <div className="mb-2 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
                         <div className="flex justify-between text-[9px] text-gray-500 mb-1">
                           <span>回答率</span>
@@ -1002,7 +935,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
               </div>
             </div>
 
-            {/* Sticky Column Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left border-collapse">
@@ -1047,7 +979,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                               className={`px-1 py-2 text-center border-l border-gray-100 ${colorClass} ${comment ? 'cursor-pointer active:opacity-50' : ''}`} 
                               title={comment || ''}
                               onClick={() => {
-                                // ★スマホなどでタップした時に全文字をポップアップで表示
                                 if (comment) alert(`${u.name}さんのコメント：\n${comment}`);
                               }}
                             >
@@ -1094,7 +1025,6 @@ export default function App() {
   const [allData, setAllData] = useState({});
   const [events, setEvents] = useState([]);
 
-  // Auth & Initial Data Load
   useEffect(() => {
     const savedUserId = localStorage.getItem(LS_USER_ID_KEY);
     
@@ -1113,7 +1043,14 @@ export default function App() {
         const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
         const unsubscribeEvents = onSnapshot(eventsRef, (docSnap) => {
           if (docSnap.exists()) {
-            const items = docSnap.data().items || [];
+            const rawItems = docSnap.data().items || [];
+            
+            // ★修正: 初期ダミーデータ（2024-05-18）や古いモックデータを強制的に除外
+            const items = rawItems.filter(item => 
+              item.date !== '2024-05-18' && 
+              !item.id.startsWith('evt-')
+            );
+            
             items.sort((a, b) => new Date(`${a.date} ${a.time.split('-')[0]}`) - new Date(`${b.date} ${b.time.split('-')[0]}`));
             setEvents(items);
           } else {
@@ -1132,14 +1069,9 @@ export default function App() {
           setAllData(data);
           
           if (!user && savedUserId) {
-            // Restore user if exists in DB, or construct if simple login (MEMBER_LIST based)
-            // But we need responses from DB.
             if (data[savedUserId]) {
               setUser({ uid: savedUserId, ...data[savedUserId] });
-            } else {
-              // Handle case where localstorage has ID but DB doesn't (maybe first load after code update)
-              // We'll let handleLogin fix this or user will re-login.
-            }
+            } 
           }
           setLoading(false);
         });
@@ -1156,13 +1088,10 @@ export default function App() {
     return () => unsubscribeAuth();
   }, []); 
 
-  // Direct login from MEMBER_LIST
   const handleLogin = async (family, name) => {
-    // Generate deterministic ID
     const userId = `${family}_${name}`;
     
     try {
-      // Check if user exists in DB, if not create
       let userData = allData[userId];
       
       if (!userData) {
@@ -1172,11 +1101,9 @@ export default function App() {
           responses: {},
           updatedAt: serverTimestamp(),
         };
-        // Save to DB
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', userId), userData);
       }
       
-      // Local Login
       localStorage.setItem(LS_USER_ID_KEY, userId);
       setUser({ uid: userId, ...userData });
 
@@ -1198,7 +1125,6 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  // --- 追加：コメント更新用関数 ---
   const handleUpdateComment = async (eventId, comment) => {
     if (!user) return;
     const newComments = { ...(user.comments || {}), [eventId]: comment };

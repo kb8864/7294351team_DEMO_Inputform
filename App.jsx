@@ -32,7 +32,8 @@ import {
   LogIn,
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Save // ★追加: Saveアイコンをインポート
 } from 'lucide-react';
 
 // --- Firebase Initialization ---
@@ -650,6 +651,8 @@ const StatusBadge = ({ status }) => {
 const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onLogout, onAddEvents, onTogglePublish }) => {
   const [activeTab, setActiveTab] = useState('input');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('ALL');
+  // ★追加: 保存状態の管理ステート
+  const [isSaving, setIsSaving] = useState(false);
 
   // ★修正: ユーザー画面（入力・一覧）では「公開中」の予定だけを表示する
   const visibleEvents = useMemo(() => {
@@ -712,6 +715,14 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
     const responded = total - counts.undecided;
     const rate = total > 0 ? Math.round((responded / total) * 100) : 0;
     return { ...counts, rate, total };
+  };
+
+  // ★追加: ダミー保存用関数
+  const handleDummySave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 1000);
   };
 
   return (
@@ -799,10 +810,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                         <span className="opacity-70 text-xs tracking-wider">時間:</span>
                         {event.time}
                       </div>
-                      <div className="text-sm font-bold text-gray-600 flex items-center gap-1.5">
-                        <span className="opacity-70 text-xs tracking-wider">場所:</span>
-                        {event.location}
-                      </div>
+                      {/* ★修正: 場所の表示ブロックを削除しました */}
                     </div>
                   </div>
                   
@@ -860,6 +868,23 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                 </div>
               );
             })}
+
+            {/* ★追加: Dummy Floating Save Button */}
+            <div className="fixed bottom-6 right-6 z-40 safe-area-bottom">
+              <button
+                onClick={handleDummySave}
+                disabled={isSaving}
+                className={`flex items-center gap-2 px-6 py-4 rounded-full font-bold shadow-lg transition-all transform active:scale-95 ${
+                  isSaving 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
+              >
+                <Save className="w-5 h-5" />
+                <span>{isSaving ? '保存完了' : '変更を保存'}</span>
+              </button>
+            </div>
+
           </div>
         )}
 

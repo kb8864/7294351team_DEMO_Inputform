@@ -30,7 +30,9 @@ import {
   Plus,
   RefreshCw,
   LogIn,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // --- Firebase Initialization ---
@@ -368,7 +370,7 @@ const AuthScreen = ({ onLogin }) => {
 };
 
 // 2. Admin Panel
-const AdminPanel = ({ currentEvents, onAddEvents }) => {
+const AdminPanel = ({ currentEvents, onAddEvents, onTogglePublish }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [fetchedEvents, setFetchedEvents] = useState([]);
@@ -451,8 +453,6 @@ const fetchCalendarEvents = async () => {
           location: event.location || '未定'
         };
       });
-      // ★修正: すでに登録済みの予定を除外するフィルタを削除しました
-      // .filter(e => !currentIds.has(e.id)); 
 
     setFetchedEvents(newCandidates);
     
@@ -480,7 +480,6 @@ const fetchCalendarEvents = async () => {
     onAddEvents(eventsToAdd);
     setFetchedEvents([]);
     setSelectedEventIds(new Set());
-    // alertはonAddEvents側で出すため削除
   };
 
   const handleDeleteAllEvents = async () => {
@@ -587,7 +586,7 @@ const fetchCalendarEvents = async () => {
         )}
       </div>
 
-<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-gray-800 text-sm">公開中の日程</h3>
           {currentEvents.length > 0 && (
@@ -605,6 +604,7 @@ const fetchCalendarEvents = async () => {
           ) : (
             currentEvents.map(event => {
               const { dayStr, colorClass } = getDayInfo(event.date);
+              const isPublished = event.isPublished !== false; // Default true if undefined
               return (
                 <div key={event.id} className="p-3 border border-gray-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between text-sm bg-gray-50/50 gap-2">
                   <div>
@@ -613,7 +613,17 @@ const fetchCalendarEvents = async () => {
                     </span>
                     <span className="font-bold text-gray-800 text-xs sm:text-sm">{event.title}</span>
                   </div>
-                  <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full whitespace-nowrap self-start sm:self-center">公開中</span>
+                  <button 
+                    onClick={() => onTogglePublish(event.id)}
+                    className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full whitespace-nowrap self-start sm:self-center font-bold transition active:scale-95 border ${
+                      isPublished 
+                        ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' 
+                        : 'bg-gray-200 text-gray-500 border-gray-300 hover:bg-gray-300'
+                    }`}
+                  >
+                    {isPublished ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    {isPublished ? '公開中' : '非公開'}
+                  </button>
                 </div>
               );
             })
@@ -637,23 +647,24 @@ const StatusBadge = ({ status }) => {
 };
 
 // 4. Main Dashboard
-const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onLogout, onAddEvents }) => {
+const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onLogout, onAddEvents, onTogglePublish }) => {
   const [activeTab, setActiveTab] = useState('input');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('ALL');
 
+  // ★修正: ユーザー画面（入力・一覧）では「公開中」の予定だけを表示する
+  const visibleEvents = useMemo(() => {
+    return events.filter(e => e.isPublished !== false);
+  }, [events]);
+
   const filteredUsers = useMemo(() => {
     let users = Object.values(allData);
-    
-    // Create a map of existing data
     const dataMap = allData;
-    
-    // Merge MEMBER_LIST with Firestore data
     const mergedList = MEMBER_LIST.map(member => {
       const docId = `${member.family}_${member.name}`;
       return {
         uid: docId,
         ...member,
-        ...(dataMap[docId] || {}) // Overwrite with Firestore data if exists
+        ...(dataMap[docId] || {}) 
       };
     });
 
@@ -671,18 +682,18 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
 
 
   const getFamilyResponseRate = (familyName) => {
-    if (events.length === 0) return 0;
+    if (visibleEvents.length === 0) return 0; // Use visibleEvents
     let targetMembers = MEMBER_LIST;
     if (familyName !== 'ALL') {
       targetMembers = MEMBER_LIST.filter(m => m.family === familyName);
     }
-    const totalExpected = targetMembers.length * events.length;
+    const totalExpected = targetMembers.length * visibleEvents.length;
     let respondedCount = 0;
     targetMembers.forEach(m => {
       const docId = `${m.family}_${m.name}`;
       const userData = allData[docId];
       if (userData && userData.responses) {
-        events.forEach(e => {
+        visibleEvents.forEach(e => {
           const status = userData.responses[e.id] || 'undecided';
           if (status !== 'undecided') respondedCount++;
         });
@@ -760,16 +771,16 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
 
       <main className="max-w-4xl mx-auto w-full p-4 flex-1 pb-20 safe-area-bottom">
         
-        {/* --- VIEW 1: INPUT MODE --- */}
+        {/* --- VIEW 1: INPUT MODE (Uses visibleEvents) --- */}
         {activeTab === 'input' && (
           <div className="space-y-4">
-            {events.length === 0 && (
+            {visibleEvents.length === 0 && (
               <div className="text-center py-12 bg-white rounded-2xl text-gray-400 text-sm border border-dashed border-gray-200">
                 現在登録されている練習予定はありません
               </div>
             )}
             
-            {events.map(event => {
+            {visibleEvents.map(event => {
               const myStatus = allData[user.uid]?.responses?.[event.id] || 'undecided';
               const { dayStr, colorClass } = getDayInfo(event.date);
               
@@ -852,7 +863,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
           </div>
         )}
 
-        {/* --- VIEW 2: LIST MODE --- */}
+        {/* --- VIEW 2: LIST MODE (Uses visibleEvents) --- */}
         {activeTab === 'list' && (
           <div className="space-y-5">
             <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-200">
@@ -915,7 +926,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
 
             <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth">
               <div className="flex gap-3 w-max">
-                {events.map(event => {
+                {visibleEvents.map(event => {
                   const counts = getEventCounts(event.id);
                   const { dayStr, colorClass } = getDayInfo(event.date);
                   return (
@@ -953,7 +964,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                       <th className="px-3 py-3 sticky left-0 bg-gray-50 z-10 w-32 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-xs">
                         名前 ({filteredUsers.length})
                       </th>
-                      {events.map(event => {
+                      {visibleEvents.map(event => {
                         const { dayStr } = getDayInfo(event.date);
                         return (
                           <th key={event.id} className="px-1 py-2 min-w-[70px] text-center font-normal border-l border-gray-100">
@@ -971,7 +982,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                           <div className="font-bold text-gray-800 text-xs sm:text-sm truncate w-28">{u.name}</div>
                           <div className="text-[10px] text-gray-400 truncate w-28">{u.family.replace('ファミリー', '')}</div>
                         </td>
-                      {events.map(event => {
+                      {visibleEvents.map(event => {
                           const status = u.responses?.[event.id] || 'undecided';
                           const comment = u.comments?.[event.id]; // コメントを取得
                           
@@ -1007,7 +1018,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                     ))}
                     {filteredUsers.length === 0 && (
                       <tr>
-                        <td colSpan={events.length + 1} className="px-4 py-12 text-center text-gray-400 text-xs">
+                        <td colSpan={visibleEvents.length + 1} className="px-4 py-12 text-center text-gray-400 text-xs">
                           表示するメンバーがいません
                         </td>
                       </tr>
@@ -1019,9 +1030,9 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
           </div>
         )}
 
-        {/* --- VIEW 3: ADMIN MODE --- */}
+        {/* --- VIEW 3: ADMIN MODE (Uses all events) --- */}
         {activeTab === 'admin' && (
-          <AdminPanel currentEvents={events} onAddEvents={onAddEvents} />
+          <AdminPanel currentEvents={events} onAddEvents={onAddEvents} onTogglePublish={onTogglePublish} />
         )}
       </main>
     </div>
@@ -1147,32 +1158,53 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  // ★修正: 新規追加ではなく、既存のIDは上書き更新するように変更
+  // ★追加: 公開/非公開の切り替え機能
+  const handleTogglePublish = async (eventId) => {
+    try {
+      const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
+      const docSnap = await getDoc(eventsRef);
+      if (docSnap.exists()) {
+        const items = docSnap.data().items || [];
+        const updatedItems = items.map(item => {
+          if (item.id === eventId) {
+            const currentStatus = item.isPublished !== false; // Default true if undefined
+            return { ...item, isPublished: !currentStatus };
+          }
+          return item;
+        });
+        await updateDoc(eventsRef, { items: updatedItems });
+      }
+    } catch (e) {
+      console.error(e);
+      alert("更新に失敗しました");
+    }
+  };
+
   const handleAddEvents = async (newEvents) => {
     try {
       const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
       
-      // 1. 現在のデータを取得
       const docSnap = await getDoc(eventsRef);
       let currentItems = [];
       if (docSnap.exists()) {
         currentItems = docSnap.data().items || [];
       }
 
-      // 2. 新しいデータで上書き（IDが一致するものは置換、なければ追加）
       let updatedItems = [...currentItems];
       newEvents.forEach(newEvent => {
         const index = updatedItems.findIndex(item => item.id === newEvent.id);
         if (index > -1) {
-          // 既存の予定を更新（上書き）
-          updatedItems[index] = newEvent;
+          // 既存の予定を更新（※手動で設定した isPublished の状態は維持する）
+          updatedItems[index] = { 
+            ...newEvent, 
+            isPublished: updatedItems[index].isPublished !== false 
+          };
         } else {
-          // 新しい予定を追加
-          updatedItems.push(newEvent);
+          // 新しい予定はデフォルトで公開にする
+          updatedItems.push({ ...newEvent, isPublished: true });
         }
       });
 
-      // 3. データベースを更新
       await updateDoc(eventsRef, { items: updatedItems });
       alert(`${newEvents.length}件の予定を更新/追加しました`);
 
@@ -1208,6 +1240,7 @@ export default function App() {
       onUpdateComment={handleUpdateComment}
       onLogout={handleLogout}
       onAddEvents={handleAddEvents}
+      onTogglePublish={handleTogglePublish}
     />
   );
 }

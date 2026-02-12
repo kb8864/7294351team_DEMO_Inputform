@@ -388,6 +388,14 @@ const fetchCalendarEvents = async () => {
   setIsFetching(true);
   try {
     const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
+    
+    // ★追加: APIキーがVercelから読み込めない場合のチェック
+    if (!API_KEY) {
+        alert("APIキーが読み込めません。Vercelの環境変数に「VITE_GOOGLE_CALENDAR_API_KEY」が正しく設定され、再デプロイされているか確認してください。");
+        setIsFetching(false);
+        return;
+    }
+
     const CALENDAR_ID = "yt8158886636@gmail.com";
     
     // 期間設定：今月の1日 〜 再来月の末日
@@ -414,7 +422,14 @@ const fetchCalendarEvents = async () => {
 
     // データの加工とフィルタリング
     const newCandidates = (data.items || [])
-      .filter(event => targetColorIds.includes(event.colorId)) // 色で絞り込み
+      // ★修正: 色IDが「undefined（既定の色）」の予定も許可し、
+      //        色IDがある場合は指定の色（1, 5, 6）のみ許可する。
+      .filter(event => {
+         // 色が設定されていない（カレンダー既定の色）場合は true を返す
+         if (!event.colorId) return true;
+         // 色が設定されている場合は、指定の色のみ true を返す
+         return targetColorIds.includes(event.colorId);
+      })
       .map(event => {
         // 日付・時間のフォーマット処理 (日本時間対応)
         const startObj = new Date(event.start.dateTime || event.start.date);

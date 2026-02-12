@@ -799,10 +799,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                         <span className="opacity-70 text-xs tracking-wider">時間:</span>
                         {event.time}
                       </div>
-                      <div className="text-sm font-bold text-gray-600 flex items-center gap-1.5">
-                        <span className="opacity-70 text-xs tracking-wider">場所:</span>
-                        {event.location}
-                      </div>
+                      {/* 場所の表示を削除しました */}
                     </div>
                   </div>
                   
@@ -860,6 +857,16 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                 </div>
               );
             })}
+            
+            {/* ★ 追加：右下の更新ボタン（Vercel Toolbarの位置） */}
+            <button
+              onClick={() => window.location.reload()}
+              className="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center"
+              aria-label="画面を更新"
+            >
+              <RefreshCw className="w-6 h-6" />
+            </button>
+
           </div>
         )}
 

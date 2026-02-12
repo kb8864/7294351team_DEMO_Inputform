@@ -389,7 +389,6 @@ const fetchCalendarEvents = async () => {
   try {
     const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
     
-    // ★追加: APIキーがVercelから読み込めない場合のチェック
     if (!API_KEY) {
         alert("APIキーが読み込めません。Vercelの環境変数に「VITE_GOOGLE_CALENDAR_API_KEY」が正しく設定され、再デプロイされているか確認してください。");
         setIsFetching(false);
@@ -406,7 +405,6 @@ const fetchCalendarEvents = async () => {
     const timeMin = startOfThisMonth.toISOString();
     const timeMax = endOfTwoMonthsLater.toISOString();
 
-    // APIリクエストURL作成
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`;
 
     const response = await fetch(url);
@@ -420,18 +418,14 @@ const fetchCalendarEvents = async () => {
     
     const currentIds = new Set(currentEvents.map(e => e.id));
 
-    // データの加工とフィルタリング
     const newCandidates = (data.items || [])
-      // ★修正: 色IDが「undefined（既定の色）」の予定も許可し、
-      //        色IDがある場合は指定の色（1, 5, 6）のみ許可する。
+      // 色IDが「undefined（既定の色）」の予定も許可し、
+      // 色IDがある場合は指定の色（1, 5, 6）のみ許可する。
       .filter(event => {
-         // 色が設定されていない（カレンダー既定の色）場合は true を返す
          if (!event.colorId) return true;
-         // 色が設定されている場合は、指定の色のみ true を返す
          return targetColorIds.includes(event.colorId);
       })
       .map(event => {
-        // 日付・時間のフォーマット処理 (日本時間対応)
         const startObj = new Date(event.start.dateTime || event.start.date);
         
         const yyyy = startObj.getFullYear();
@@ -443,7 +437,6 @@ const fetchCalendarEvents = async () => {
         if (event.start.dateTime) {
           const startH = String(startObj.getHours()).padStart(2, '0');
           const startM = String(startObj.getMinutes()).padStart(2, '0');
-          // 終了時間の計算のため、endオブジェクトも必要
           const endObj = new Date(event.end.dateTime || event.end.date);
           const endH = String(endObj.getHours()).padStart(2, '0');
           const endM = String(endObj.getMinutes()).padStart(2, '0');
@@ -457,12 +450,12 @@ const fetchCalendarEvents = async () => {
           time: timeStr,
           location: event.location || '未定'
         };
-      })
-      .filter(e => !currentIds.has(e.id)); // 既に追加済みの予定は除外
+      });
+      // ★修正: すでに登録済みの予定を除外するフィルタを削除しました
+      // .filter(e => !currentIds.has(e.id)); 
 
     setFetchedEvents(newCandidates);
     
-    // 最初はすべて選択状態にする
     const newIds = new Set(newCandidates.map(e => e.id));
     setSelectedEventIds(newIds);
 
@@ -487,14 +480,14 @@ const fetchCalendarEvents = async () => {
     onAddEvents(eventsToAdd);
     setFetchedEvents([]);
     setSelectedEventIds(new Set());
-    alert(`${eventsToAdd.length}件の予定を追加しました`);
+    // alertはonAddEvents側で出すため削除
   };
 
   const handleDeleteAllEvents = async () => {
     if (window.confirm("現在公開されているすべての予定を削除しますか？\n（この操作は元に戻せません）")) {
       try {
         const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
-        await setDoc(eventsRef, { items: [] }); // データベースの予定を空っぽで上書きする
+        await setDoc(eventsRef, { items: [] }); 
         alert("すべての予定を削除しました。");
       } catch (e) {
         console.error(e);
@@ -559,6 +552,7 @@ const fetchCalendarEvents = async () => {
               <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
                 {fetchedEvents.map(event => {
                   const { dayStr, colorClass } = getDayInfo(event.date);
+                  const isExisting = currentEvents.some(ce => ce.id === event.id);
                   return (
                     <div key={event.id} className="p-4 hover:bg-gray-50 flex items-start gap-3 transition active:bg-gray-100" onClick={() => toggleSelect(event.id)}>
                       <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedEventIds.has(event.id) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 bg-white'}`}>
@@ -568,6 +562,7 @@ const fetchCalendarEvents = async () => {
                         <div className="flex flex-wrap gap-2 items-center mb-1">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${colorClass} font-bold`}>{event.date} {dayStr}</span>
                           <span className="font-bold text-gray-800 text-sm">{event.time}</span>
+                          {isExisting && <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded ml-2">更新</span>}
                         </div>
                         <div className="font-bold text-gray-800 text-sm">{event.title}</div>
                         <div className="text-xs text-gray-500 font-medium mt-0.5">{event.location}</div>
@@ -582,7 +577,7 @@ const fetchCalendarEvents = async () => {
               className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
             >
               <Plus className="w-5 h-5" />
-              選択した予定を追加
+              選択した予定を追加/更新
             </button>
           </div>
         ) : (
@@ -1152,10 +1147,35 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
+  // ★修正: 新規追加ではなく、既存のIDは上書き更新するように変更
   const handleAddEvents = async (newEvents) => {
     try {
       const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
-      await updateDoc(eventsRef, { items: arrayUnion(...newEvents) });
+      
+      // 1. 現在のデータを取得
+      const docSnap = await getDoc(eventsRef);
+      let currentItems = [];
+      if (docSnap.exists()) {
+        currentItems = docSnap.data().items || [];
+      }
+
+      // 2. 新しいデータで上書き（IDが一致するものは置換、なければ追加）
+      let updatedItems = [...currentItems];
+      newEvents.forEach(newEvent => {
+        const index = updatedItems.findIndex(item => item.id === newEvent.id);
+        if (index > -1) {
+          // 既存の予定を更新（上書き）
+          updatedItems[index] = newEvent;
+        } else {
+          // 新しい予定を追加
+          updatedItems.push(newEvent);
+        }
+      });
+
+      // 3. データベースを更新
+      await updateDoc(eventsRef, { items: updatedItems });
+      alert(`${newEvents.length}件の予定を更新/追加しました`);
+
     } catch (e) {
       console.error(e);
       alert("失敗しました");

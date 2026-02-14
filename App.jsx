@@ -403,11 +403,12 @@ const fetchCalendarEvents = async () => {
     
     // 期間設定：今月の1日 〜 再来月の末日
     const now = new Date();
-    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfTwoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 3, 0, 23, 59, 59);
-
-    const timeMin = startOfThisMonth.toISOString();
-    const timeMax = endOfTwoMonthsLater.toISOString();
+    //  「1日」ではなく「now.getDate() (今日)」を指定して、今日以降の予定のみ対象にする
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());    const endOfTwoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59);
+    // 終了日は前回の修正（翌月末）を維持
+    const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59);
+    const timeMin = startOfToday.toISOString();
+    const timeMax = endOfNextMonth.toISOString();
 
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`;
 

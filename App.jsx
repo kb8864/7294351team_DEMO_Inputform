@@ -301,7 +301,7 @@ const DarumaBackground = () => {
   // ランダムなダルマを生成
   const darumas = useMemo(() => {
     const items = [];
-    const count = 12; // ダルマの数
+    const count = 18; // ダルマの数
 
 for (let i = 0; i < count; i++) {
       const isRed = Math.random() > 0.5;

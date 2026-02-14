@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
+import './App.css';
 import { 
   getAuth, 
   signInAnonymously, 
@@ -270,6 +271,82 @@ const LS_USER_ID_KEY = `yosakoi_app_user_id_${appId}`;
 
 // --- Components ---
 
+// ★追加: ダルマSVGコンポーネント
+const DarumaIcon = ({ color, className, style }) => {
+  const mainColor = color === 'red' ? '#ef4444' : '#3b82f6'; // Tailwind red-500 / blue-500
+  return (
+    <svg 
+      viewBox="0 0 100 100" 
+      className={`daruma-icon ${className}`} 
+      style={style}
+    >
+      {/* 体 */}
+      <path d="M50 95 C25 95 10 80 10 55 C10 30 25 5 50 5 C75 5 90 30 90 55 C90 80 75 95 50 95 Z" fill={mainColor} />
+      {/* 顔の白い部分 */}
+      <circle cx="50" cy="45" r="30" fill="white" />
+      {/* 目 (左) */}
+      <circle cx="38" cy="45" r="4" fill="black" />
+      {/* 目 (右) */}
+      <circle cx="62" cy="45" r="4" fill="black" />
+      {/* 髭と口の装飾（簡易） */}
+      <path d="M35 55 Q50 65 65 55" stroke="black" strokeWidth="2" fill="none" opacity="0.3" />
+      {/* 模様（お腹） */}
+      <path d="M30 75 Q50 90 70 75" stroke="gold" strokeWidth="3" fill="none" />
+    </svg>
+  );
+};
+
+// ★追加: 背景アニメーションコンポーネント
+const DarumaBackground = () => {
+  // ランダムなダルマを生成
+  const darumas = useMemo(() => {
+    const items = [];
+    const count = 12; // ダルマの数
+
+    for (let i = 0; i < count; i++) {
+      const isRed = Math.random() > 0.5;
+      const size = 30 + Math.random() * 50; // 30px ~ 80px
+      const animationType = ['anim-roll', 'anim-bounce', 'anim-sway'][Math.floor(Math.random() * 3)];
+      const duration = 5 + Math.random() * 10; // 5s ~ 15s
+      const delay = Math.random() * 5;
+      
+      // 初期位置（roll以外で使用）
+      const top = Math.random() * 90; 
+      const left = Math.random() * 90;
+
+      items.push({
+        id: i,
+        color: isRed ? 'red' : 'blue',
+        size,
+        animationType,
+        style: {
+          width: `${size}px`,
+          height: `${size}px`,
+          top: animationType === 'anim-roll' ? `${Math.random() * 80 + 10}%` : `${top}%`,
+          left: animationType === 'anim-roll' ? '-100px' : `${left}%`, // rollは画面外から
+          animationDuration: `${duration}s`,
+          animationDelay: `${delay}s`,
+        }
+      });
+    }
+    return items;
+  }, []);
+
+  return (
+    <div className="modern-gradient-bg">
+      {darumas.map((d) => (
+        <DarumaIcon 
+          key={d.id} 
+          color={d.color} 
+          className={d.animationType}
+          style={d.style}
+        />
+      ))}
+    </div>
+  );
+};
+
+
 // 1. Auth Screen (List Selection Only)
 const AuthScreen = ({ onLogin }) => {
   const [family, setFamily] = useState('');
@@ -292,8 +369,13 @@ const AuthScreen = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 safe-area-top safe-area-bottom">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm border border-indigo-50">
+<div className="min-h-screen flex items-center justify-center p-4 safe-area-top safe-area-bottom relative overflow-hidden">
+      
+      {/* ★背景アニメーション */}
+      <DarumaBackground />
+
+      {/* ログインフォーム (z-indexで手前に表示) */}
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 w-full max-w-sm border border-white/50 relative z-10">
         <div className="text-center mb-6">
           <div className="bg-indigo-600 p-4 rounded-2xl w-20 h-20 mx-auto flex items-center justify-center mb-4 shadow-lg shadow-indigo-200">
             <Users className="w-10 h-10 text-white" />
@@ -836,7 +918,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                         <span className="opacity-70 text-xs tracking-wider">時間:</span>
                         {event.time}
                       </div>
-                      {/* ★修正: 場所の表示ブロックを削除しました */}
                     </div>
                   </div>
                   
@@ -1035,7 +1116,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                         </td>
                       {visibleEvents.map(event => {
                           const status = u.responses?.[event.id] || 'undecided';
-                          const comment = u.comments?.[event.id]; // コメントを取得
+                          const comment = u.comments?.[event.id]; 
                           
                           let symbol = '－';
                           let colorClass = 'text-gray-300';
@@ -1117,7 +1198,7 @@ export default function App() {
           if (docSnap.exists()) {
             const rawItems = docSnap.data().items || [];
             
-            // ★修正: 初期ダミーデータ（2024-05-18）や古いモックデータを強制的に除外
+            
             const items = rawItems.filter(item => 
               item.date !== '2024-05-18' && 
               !item.id.startsWith('evt-')

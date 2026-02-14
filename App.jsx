@@ -33,7 +33,7 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Save // ★追加: Saveアイコンをインポート
+  Save 
 } from 'lucide-react';
 
 // --- Firebase Initialization ---
@@ -387,88 +387,85 @@ const AdminPanel = ({ currentEvents, onAddEvents, onTogglePublish }) => {
     }
   };
 
-const fetchCalendarEvents = async () => {
-  setIsFetching(true);
-  try {
-    const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
-    
-    if (!API_KEY) {
-        alert("APIキーが読み込めません。Vercelの環境変数に「VITE_GOOGLE_CALENDAR_API_KEY」が正しく設定され、再デプロイされているか確認してください。");
-        setIsFetching(false);
-        return;
+  const fetchCalendarEvents = async () => {
+    setIsFetching(true);
+    try {
+      const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
+      
+      if (!API_KEY) {
+          alert("APIキーが読み込めません。Vercelの環境変数に「VITE_GOOGLE_CALENDAR_API_KEY」が正しく設定され、再デプロイされているか確認してください。");
+          setIsFetching(false);
+          return;
+      }
+
+      const CALENDAR_ID = "rensyubu7294351@gmail.com";
+      
+      // ★期間設定：今日 〜 翌月の末日
+      const now = new Date();
+      // 時間を00:00:00に設定して今日以降の予定を取得
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59);
+
+      const timeMin = startOfToday.toISOString();
+      const timeMax = endOfNextMonth.toISOString();
+
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`;
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("取得失敗");
+      
+      const data = await response.json();
+      console.log("★★Googleから届いた生データ★★:", data.items); 
+
+      // 色IDの定義 (1:ラベンダー, 5:バナナ, 6:ミカン)
+      const targetColorIds = ['1', '5', '6'];
+      
+      const currentIds = new Set(currentEvents.map(e => e.id));
+
+      const newCandidates = (data.items || [])
+        .filter(event => {
+           if (!event.colorId) return true;
+           return targetColorIds.includes(event.colorId);
+        })
+        .map(event => {
+          const startObj = new Date(event.start.dateTime || event.start.date);
+          
+          const yyyy = startObj.getFullYear();
+          const mm = String(startObj.getMonth() + 1).padStart(2, '0');
+          const dd = String(startObj.getDate()).padStart(2, '0');
+          const dateStr = `${yyyy}-${mm}-${dd}`;
+          
+          let timeStr = '終日';
+          if (event.start.dateTime) {
+            const startH = String(startObj.getHours()).padStart(2, '0');
+            const startM = String(startObj.getMinutes()).padStart(2, '0');
+            const endObj = new Date(event.end.dateTime || event.end.date);
+            const endH = String(endObj.getHours()).padStart(2, '0');
+            const endM = String(endObj.getMinutes()).padStart(2, '0');
+            timeStr = `${startH}:${startM}-${endH}:${endM}`;
+          }
+
+          return {
+            id: event.id,
+            title: event.summary || 'タイトルなし',
+            date: dateStr,
+            time: timeStr,
+            location: event.location || '未定'
+          };
+        });
+
+      setFetchedEvents(newCandidates);
+      
+      const newIds = new Set(newCandidates.map(e => e.id));
+      setSelectedEventIds(newIds);
+
+    } catch (error) {
+      console.error(error);
+      alert('カレンダーの読み込みに失敗しました。APIキーなどを確認してください。');
+    } finally {
+      setIsFetching(false);
     }
-
-    const CALENDAR_ID = "rensyubu7294351@gmail.com";
-    // const CALENDAR_ID = "yt8158886636@gmail.com";
-    
-    // 期間設定：今月の1日 〜 再来月の末日
-    const now = new Date();
-    //  「1日」ではなく「now.getDate() (今日)」を指定して、今日以降の予定のみ対象にする
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());    const endOfTwoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59);
-    // 終了日は前回の修正（翌月末）を維持
-    const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59);
-    const timeMin = startOfToday.toISOString();
-    const timeMax = endOfNextMonth.toISOString();
-
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`;
-
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("取得失敗");
-    
-    const data = await response.json();
-    console.log("★★Googleから届いた生データ★★:", data.items); 
-
-    // 色IDの定義 (1:ラベンダー, 5:バナナ, 6:ミカン)
-    const targetColorIds = ['1', '5', '6'];
-    
-    const currentIds = new Set(currentEvents.map(e => e.id));
-
-    const newCandidates = (data.items || [])
-      // 色IDが「undefined（既定の色）」の予定も許可し、
-      // 色IDがある場合は指定の色（1, 5, 6）のみ許可する。
-      .filter(event => {
-         if (!event.colorId) return true;
-         return targetColorIds.includes(event.colorId);
-      })
-      .map(event => {
-        const startObj = new Date(event.start.dateTime || event.start.date);
-        
-        const yyyy = startObj.getFullYear();
-        const mm = String(startObj.getMonth() + 1).padStart(2, '0');
-        const dd = String(startObj.getDate()).padStart(2, '0');
-        const dateStr = `${yyyy}-${mm}-${dd}`;
-        
-        let timeStr = '終日';
-        if (event.start.dateTime) {
-          const startH = String(startObj.getHours()).padStart(2, '0');
-          const startM = String(startObj.getMinutes()).padStart(2, '0');
-          const endObj = new Date(event.end.dateTime || event.end.date);
-          const endH = String(endObj.getHours()).padStart(2, '0');
-          const endM = String(endObj.getMinutes()).padStart(2, '0');
-          timeStr = `${startH}:${startM}-${endH}:${endM}`;
-        }
-
-        return {
-          id: event.id,
-          title: event.summary || 'タイトルなし',
-          date: dateStr,
-          time: timeStr,
-          location: event.location || '未定'
-        };
-      });
-
-    setFetchedEvents(newCandidates);
-    
-    const newIds = new Set(newCandidates.map(e => e.id));
-    setSelectedEventIds(newIds);
-
-  } catch (error) {
-    console.error(error);
-    alert('カレンダーの読み込みに失敗しました。APIキーなどを確認してください。');
-  } finally {
-    setIsFetching(false);
-  }
-};
+  };
 
   const toggleSelect = (id) => {
     const newSet = new Set(selectedEventIds);
@@ -496,6 +493,16 @@ const fetchCalendarEvents = async () => {
         alert("削除に失敗しました。");
       }
     }
+  };
+
+  // ★追加: 全選択・全解除の関数
+  const handleSelectAll = () => {
+    const allIds = new Set(fetchedEvents.map(e => e.id));
+    setSelectedEventIds(allIds);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedEventIds(new Set());
   };
 
   if (!isAuthenticated) {
@@ -547,8 +554,25 @@ const fetchCalendarEvents = async () => {
         {fetchedEvents.length > 0 ? (
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 text-xs font-bold text-gray-500 flex justify-between">
-                <span>候補一覧</span>
+              {/* ★ヘッダー部分を修正: 全選択・全解除ボタンの追加 */}
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 text-xs font-bold text-gray-500 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <span>候補一覧</span>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={handleSelectAll}
+                      className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-indigo-50 text-indigo-600 transition shadow-sm"
+                    >
+                      全選択
+                    </button>
+                    <button 
+                      onClick={handleDeselectAll}
+                      className="px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100 text-gray-500 transition shadow-sm"
+                    >
+                      全解除
+                    </button>
+                  </div>
+                </div>
                 <span>{selectedEventIds.size}件選択</span>
               </div>
               <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
@@ -1185,7 +1209,6 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  // ★追加: 公開/非公開の切り替え機能
   const handleTogglePublish = async (eventId) => {
     try {
       const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
@@ -1194,7 +1217,7 @@ export default function App() {
         const items = docSnap.data().items || [];
         const updatedItems = items.map(item => {
           if (item.id === eventId) {
-            const currentStatus = item.isPublished !== false; // Default true if undefined
+            const currentStatus = item.isPublished !== false; 
             return { ...item, isPublished: !currentStatus };
           }
           return item;
@@ -1221,13 +1244,11 @@ export default function App() {
       newEvents.forEach(newEvent => {
         const index = updatedItems.findIndex(item => item.id === newEvent.id);
         if (index > -1) {
-          // 既存の予定を更新（※手動で設定した isPublished の状態は維持する）
           updatedItems[index] = { 
             ...newEvent, 
             isPublished: updatedItems[index].isPublished !== false 
           };
         } else {
-          // 新しい予定はデフォルトで公開にする
           updatedItems.push({ ...newEvent, isPublished: true });
         }
       });

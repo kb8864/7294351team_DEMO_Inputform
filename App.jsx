@@ -436,7 +436,8 @@ const AuthScreen = ({ onLogin }) => {
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div className="bg-blue-50 p-3 rounded-lg flex gap-2 items-start text-xs text-blue-700 mb-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <p>あなたの所属ファミリーと名前を選んで「ログイン」を押してください。</p>
+              <p>あなたの所属ファミリーと名前を選んで</p><br></br>
+                <p>「ログイン」を押してください。</p>
           </div>
 
           <div>

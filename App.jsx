@@ -422,8 +422,12 @@ const AuthScreen = ({ onLogin }) => {
       {/* ログインフォーム (z-indexで手前に表示) */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 w-full max-w-sm border border-white/50 relative z-10">
         <div className="text-center mb-6">
-          <div className="bg-indigo-600 p-4 rounded-2xl w-20 h-20 mx-auto flex items-center justify-center mb-4 shadow-lg shadow-indigo-200">
-            <Users className="w-10 h-10 text-white" />
+          <div className="w-28 h-28 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src="/images/七福アイコン.png" 
+              alt="チームロゴ" 
+              className="w-full h-full object-contain drop-shadow-xl" 
+            />
           </div>
           <h1 className="text-xl font-bold text-gray-800">練習出欠管理アプリ</h1>
           <p className="text-xs text-gray-400 mt-1">ログイン画面</p>
@@ -887,7 +891,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
             <div className="bg-indigo-600 p-1.5 rounded-lg shrink-0 hidden sm:block">
               <Calendar className="w-4 h-4 text-white" />
             </div>
-            <h1 className="font-bold text-gray-800 text-sm sm:text-base md:text-lg truncate">よさこい出欠</h1>
+            <h1 className="font-bold text-gray-800 text-sm sm:text-base md:text-lg truncate">練習出欠管理アプリ</h1>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">

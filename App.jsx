@@ -362,6 +362,10 @@ const AuthScreen = ({ onLogin }) => {
   const [family, setFamily] = useState('');
   const [selectedName, setSelectedName] = useState('');
 
+  // エラーポップアップ表示用の状態管理
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   // Filter members from constant list
   const familyMembers = useMemo(() => {
     if (!family) return [];
@@ -378,11 +382,42 @@ const AuthScreen = ({ onLogin }) => {
     }
   };
 
+  //  アラートを表示する代わりの関数
+  const showAlert = (msg) => {
+    setErrorMessage(msg);
+    setShowError(true);
+  };
+
+  //  アラートを閉じる関数
+  const closeAlert = () => {
+    setShowError(false);
+  };
+
   return (
 <div className="min-h-screen flex items-center justify-center p-4 safe-area-top safe-area-bottom relative overflow-hidden">
       
       {/* ★背景アニメーション */}
       <DarumaBackground />
+
+      {showError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs text-center border border-gray-100 transform transition-all scale-100">
+            <div className="bg-red-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+              <AlertCircle className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">確認してください</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium">
+              {errorMessage}
+            </p>
+            <button 
+              onClick={closeAlert}
+              className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-gray-800 active:scale-95 transition-all"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ログインフォーム (z-indexで手前に表示) */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 w-full max-w-sm border border-white/50 relative z-10">
@@ -390,8 +425,8 @@ const AuthScreen = ({ onLogin }) => {
           <div className="bg-indigo-600 p-4 rounded-2xl w-20 h-20 mx-auto flex items-center justify-center mb-4 shadow-lg shadow-indigo-200">
             <Users className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-gray-800">よさこい出欠</h1>
-          <p className="text-xs text-gray-400 mt-1">メンバー選択ログイン</p>
+          <h1 className="text-xl font-bold text-gray-800">練習出欠管理アプリ</h1>
+          <p className="text-xs text-gray-400 mt-1">ログイン画面</p>
         </div>
 
         <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -427,7 +462,7 @@ const AuthScreen = ({ onLogin }) => {
               {!family && (
                 <div 
                   className="absolute inset-0 z-10" 
-                  onClick={() => alert("先にファミリーを選択してください！")}
+                  onClick={() => showAlert("先にファミリーを選択してください！")}
                 />
               )}
 

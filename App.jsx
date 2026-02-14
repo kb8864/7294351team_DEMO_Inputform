@@ -303,11 +303,21 @@ const DarumaBackground = () => {
     const items = [];
     const count = 12; // ダルマの数
 
-    for (let i = 0; i < count; i++) {
+for (let i = 0; i < count; i++) {
       const isRed = Math.random() > 0.5;
       const size = 30 + Math.random() * 50; // 30px ~ 80px
       const animationType = ['anim-roll', 'anim-bounce', 'anim-sway'][Math.floor(Math.random() * 3)];
-      const duration = 5 + Math.random() * 10; // 5s ~ 15s
+      
+      // ★速度調整ロジック: 種類によって時間を変える
+      let duration;
+      if (animationType === 'anim-bounce') {
+        duration = 1.5 + Math.random() * 1.5; // 1.5秒〜3.0秒 (ぴょんぴょん速く)
+      } else if (animationType === 'anim-roll') {
+        duration = 7 + Math.random() * 5;    // 5秒〜10秒 (転がる速度アップ)
+      } else {
+        duration = 2 + Math.random() * 4;    // 3秒〜7秒 (揺れも少し速く)
+      }
+
       const delay = Math.random() * 5;
       
       // 初期位置（roll以外で使用）

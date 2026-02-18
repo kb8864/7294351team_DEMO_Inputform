@@ -1138,8 +1138,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-              <div className="overflow-x-auto">
+  <div className="overflow-auto max-h-[70vh]">
                 <table className="w-full text-sm text-left border-collapse">
                   <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
                     <tr>

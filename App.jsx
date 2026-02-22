@@ -786,10 +786,17 @@ const StatusBadge = ({ status }) => {
 };
 
 // 4. Main Dashboard
-const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onLogout, onAddEvents, onTogglePublish }) => {
+const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onBatchUpdate, onLogout, onAddEvents, onTogglePublish }) => { // ★onBatchUpdate追加
   const [activeTab, setActiveTab] = useState('input');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('ALL');
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedComment, setSelectedComment] = useState(null);
+
+  // 追加：一括入力用の状態管理
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedEventIds, setSelectedEventIds] = useState(new Set());
+  const [batchStatus, setBatchStatus] = useState('absent');
+  const [batchComment, setBatchComment] = useState('');
 
   const visibleEvents = useMemo(() => {
     return events.filter(e => e.isPublished !== false);
@@ -988,15 +995,30 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onL
                   </div>
 
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${['late', 'absent', 'tentative'].includes(myStatus) ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="p-3 bg-indigo-50/50 border-t border-gray-100">
-                      <input 
-                        type="text"
-                        placeholder="理由や時間などを入力（任意）"
-                        defaultValue={user.comments?.[event.id] || ''}
-                        onBlur={(e) => onUpdateComment(event.id, e.target.value)}
-                        className="w-full text-sm bg-white border border-gray-200 rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
-                      />
-                    </div>
+<div className="p-3 bg-indigo-50/50 border-t border-gray-100">
+  <input 
+    id={`comment-input-${event.id}`} 
+    type="text"
+    placeholder="理由を入力"
+    defaultValue={user.comments?.[event.id] || ''}
+    onBlur={(e) => onUpdateComment(event.id, e.target.value)}
+    className="w-full text-sm bg-white border border-gray-200 rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+  />
+  <button 
+    onClick={(e) => {
+      e.stopPropagation();
+      const val = document.getElementById(`comment-input-${event.id}`)?.value || '';
+      setBatchStatus(myStatus);   // 現在のステータスをコピー
+      setBatchComment(val);       // 入力されたコメントをコピー
+      setIsBatchMode(true);       // 一括モードON
+      setSelectedEventIds(new Set([event.id])); // 今の日程を選択済みにする
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // 操作パネルまでスクロール
+    }}
+    className="mt-2 w-full py-2 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg border border-indigo-100 flex items-center justify-center gap-1 hover:bg-indigo-100 transition shadow-sm active:scale-95"
+  >
+    <Plus className="w-3 h-3" /> この内容を他の日にも一括反映する
+  </button>
+</div>
                   </div>
 
                 </div>
@@ -1387,6 +1409,27 @@ export default function App() {
     return <AuthScreen onLogin={handleLogin} />;
   }
 
+  
+// 一括更新ロジック (Firestoreドット記法で最適化)
+  const handleBatchUpdate = async (eventIds, status, comment) => {
+    if (!user || eventIds.length === 0) return;
+    const nr = { ...user.responses };
+    const nc = { ...(user.comments || {}) };
+    const updates = { updatedAt: serverTimestamp() };
+    eventIds.forEach(id => {
+      nr[id] = status; 
+      updates[`responses.${id}`] = status; // 他人の回答を壊さないドット記法
+      if (comment) { 
+        nc[id] = comment; 
+        updates[`comments.${id}`] = comment; 
+      }
+    });
+    setUser({ ...user, responses: nr, comments: nc });
+    try { 
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), updates); 
+    } catch (e) { alert("更新に失敗しました"); }
+  };
+
   return (
     <Dashboard 
       user={user} 
@@ -1394,6 +1437,7 @@ export default function App() {
       allData={allData} 
       onUpdateStatus={handleUpdateStatus} 
       onUpdateComment={handleUpdateComment}
+      onBatchUpdate={handleBatchUpdate} // 追加
       onLogout={handleLogout}
       onAddEvents={handleAddEvents}
       onTogglePublish={handleTogglePublish}

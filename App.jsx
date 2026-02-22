@@ -1393,6 +1393,7 @@ export default function App() {
   };
 
   const handleUpdateStatus = async (eventId, status) => {
+    if (!user) return;
     // 出欠状態のコピーを作成
     const newResponses = { ...user.responses, [eventId]: status };
     const newComments = { ...(user.comments || {}) };
@@ -1403,32 +1404,35 @@ export default function App() {
     };
 
     // 出席が選ばれた場合、その日のコメントだけを空にする
-    if (status === 'present' && newComments[eventId]) {
+if (status === 'present') {
       newComments[eventId] = '';
-      updates[`comments.${eventId}`] = ''; // データベース上も空文字で上書き
+      updates[`comments.${eventId}`] = ''; 
     }
 
-    // 画面の表示(State)を更新
     setUser({ ...user, responses: newResponses, comments: newComments }); 
 
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), updates);
-    } catch (e) { 
-      console.error(e); 
-    }
+    } catch (e) { console.error(e); }
   };
 
   const handleUpdateComment = async (eventId, comment) => {
     if (!user) return;
+    
+    // すでにステータスが「参加」になっている場合は、誤ってコメントが復活するのを防ぐ
+    if (user.responses?.[eventId] === 'present') return;
+
     const newComments = { ...(user.comments || {}), [eventId]: comment };
     setUser({ ...user, comments: newComments }); 
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), {
-        comments: newComments,
+        [`comments.${eventId}`]: comment,
         updatedAt: serverTimestamp()
       });
     } catch (e) { console.error(e); }
   };
+
+
 
   const handleTogglePublish = async (eventId) => {
     try {
@@ -1501,21 +1505,31 @@ export default function App() {
   }
 
   
-// 一括更新ロジック (Firestoreドット記法で最適化)
-  const handleBatchUpdate = async (eventIds, status, comment) => {
+// 一括更新ロジック 
+const handleBatchUpdate = async (eventIds, status, comment) => {
     if (!user || eventIds.length === 0) return;
     const nr = { ...user.responses };
     const nc = { ...(user.comments || {}) };
     const updates = { updatedAt: serverTimestamp() };
+    
     eventIds.forEach(id => {
       nr[id] = status; 
-      updates[`responses.${id}`] = status; // 他人の回答を壊さないドット記法
-      if (comment) { 
+      updates[`responses.${id}`] = status; 
+      
+      // 一括入力モードで「参加」にした場合も、すべての対象日のコメントを強制的に空にする
+      if (status === 'present') {
+        nc[id] = '';
+        updates[`comments.${id}`] = '';
+      } 
+      // 参加以外で、コメントが入力されていればそれをセット
+      else if (comment !== undefined && comment !== null) { 
         nc[id] = comment; 
         updates[`comments.${id}`] = comment; 
       }
     });
+    
     setUser({ ...user, responses: nr, comments: nc });
+    
     try { 
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), updates); 
     } catch (e) { alert("更新に失敗しました"); }
@@ -1535,5 +1549,6 @@ export default function App() {
     />
   );
 }
+
 
 

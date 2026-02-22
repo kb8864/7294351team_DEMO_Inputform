@@ -786,14 +786,14 @@ const StatusBadge = ({ status }) => {
 };
 
 // 4. Main Dashboard
-const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onBatchUpdate, onLogout, onAddEvents, onTogglePublish }) => { // ★onBatchUpdate追加
+const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onBatchUpdate, onLogout, onAddEvents, onTogglePublish }) => {
   const [activeTab, setActiveTab] = useState('input');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('ALL');
   const [isSaving, setIsSaving] = useState(false);
   const [selectedComment, setSelectedComment] = useState(null);
 
-  // 追加：一括入力用の状態管理
-  const [isBatchMode, setIsBatchMode] = useState(false);
+  // 追加：一括操作用の新しい状態管理
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [selectedEventIds, setSelectedEventIds] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState('absent');
   const [batchComment, setBatchComment] = useState('');
@@ -802,69 +802,45 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
     return events.filter(e => e.isPublished !== false);
   }, [events]);
 
-  const filteredUsers = useMemo(() => {
-    let users = Object.values(allData);
+const filteredUsers = useMemo(() => {
     const dataMap = allData;
-    const mergedList = MEMBER_LIST.map(member => {
-      const docId = `${member.family}_${member.name}`;
-      return {
-        uid: docId,
-        ...member,
-        ...(dataMap[docId] || {}) 
-      };
-    });
-
+    const mergedList = MEMBER_LIST.map(member => { const docId = `${member.family}_${member.name}`; return { uid: docId, ...member, ...(dataMap[docId] || {}) }; });
     let result = mergedList;
-    if (selectedFamilyFilter === 'COMMENTED') {
-      result = result.filter(u => {
-        if (!u.comments) return false;
-        return Object.values(u.comments).some(c => c && c.trim() !== '');
-      });
-    } else if (selectedFamilyFilter !== 'ALL') {
-      result = result.filter(u => u.family === selectedFamilyFilter);
-    }
+    if (selectedFamilyFilter === 'COMMENTED') result = result.filter(u => u.comments && Object.values(u.comments).some(c => c && c.trim() !== ''));
+    else if (selectedFamilyFilter !== 'ALL') result = result.filter(u => u.family === selectedFamilyFilter);
     return result;
   }, [allData, selectedFamilyFilter]);
 
-
   const getFamilyResponseRate = (familyName) => {
     if (visibleEvents.length === 0) return 0;
-    let targetMembers = MEMBER_LIST;
-    if (familyName !== 'ALL') {
-      targetMembers = MEMBER_LIST.filter(m => m.family === familyName);
-    }
-    const totalExpected = targetMembers.length * visibleEvents.length;
-    let respondedCount = 0;
-    targetMembers.forEach(m => {
-      const docId = `${m.family}_${m.name}`;
-      const userData = allData[docId];
-      if (userData && userData.responses) {
-        visibleEvents.forEach(e => {
-          const status = userData.responses[e.id] || 'undecided';
-          if (status !== 'undecided') respondedCount++;
-        });
-      }
-    });
-    return Math.round((respondedCount / totalExpected) * 100) || 0;
+    const targetMembers = familyName === 'ALL' ? MEMBER_LIST : MEMBER_LIST.filter(m => m.family === familyName);
+    let responded = 0;
+    targetMembers.forEach(m => { const d = allData[`${m.family}_${m.name}`]; if (d?.responses) visibleEvents.forEach(e => { if ((d.responses[e.id] || 'undecided') !== 'undecided') responded++; }); });
+    return Math.round((responded / (targetMembers.length * visibleEvents.length)) * 100) || 0;
   };
 
   const getEventCounts = (eventId) => {
     let counts = { present: 0, absent: 0, late: 0, tentative: 0, undecided: 0 };
-    filteredUsers.forEach(u => {
-      const status = u.responses?.[eventId] || 'undecided';
-      if (counts[status] !== undefined) counts[status]++;
-    });
-    const total = filteredUsers.length;
-    const responded = total - counts.undecided;
-    const rate = total > 0 ? Math.round((responded / total) * 100) : 0;
-    return { ...counts, rate, total };
+    filteredUsers.forEach(u => { const s = u.responses?.[eventId] || 'undecided'; counts[s]++; });
+    return { ...counts, rate: filteredUsers.length > 0 ? Math.round(((filteredUsers.length - counts.undecided) / filteredUsers.length) * 100) : 0 };
   };
 
-  const handleDummySave = () => {
+// 追加：日付をタップした時の選択切り替えロジック
+  const toggleEventSelection = (id) => {
+    const newSet = new Set(selectedEventIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedEventIds(newSet);
+  };
+
+// 追加：モーダル内の「反映する」ボタンを押した時の処理
+  const handleApplyBatch = async () => {
+    if (selectedEventIds.size === 0) { alert("日程を選択してください"); return; }
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 1000);
+    await onBatchUpdate(Array.from(selectedEventIds), batchStatus, batchComment);
+    setIsBatchModalOpen(false); 
+    setSelectedEventIds(new Set()); 
+    setIsSaving(false);
   };
 
   return (
@@ -996,7 +972,7 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
 
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${['late', 'absent', 'tentative'].includes(myStatus) ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
 <div className="p-3 bg-indigo-50/50 border-t border-gray-100">
-  <input 
+<input 
     id={`comment-input-${event.id}`} 
     type="text"
     placeholder="理由を入力"
@@ -1004,16 +980,15 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
     onBlur={(e) => onUpdateComment(event.id, e.target.value)}
     className="w-full text-sm bg-white border border-gray-200 rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
   />
-  <button 
-    onClick={(e) => {
-      e.stopPropagation();
-      const val = document.getElementById(`comment-input-${event.id}`)?.value || '';
-      setBatchStatus(myStatus);   // 現在のステータスをコピー
-      setBatchComment(val);       // 入力されたコメントをコピー
-      setIsBatchMode(true);       // 一括モードON
-      setSelectedEventIds(new Set([event.id])); // 今の日程を選択済みにする
-      window.scrollTo({ top: 0, behavior: 'smooth' }); // 操作パネルまでスクロール
-    }}
+<button 
+    onClick={(e) => { 
+      e.stopPropagation(); 
+      const val = document.getElementById(`comment-input-${event.id}`)?.value || ''; 
+      setBatchStatus(myStatus);   // 現在の出席/欠席をコピー
+      setBatchComment(val);       // 入力された理由をコピー
+      setIsBatchModalOpen(true);  // カレンダー選択画面（モーダル）を開く
+      setSelectedEventIds(new Set([event.id])); // 今の日程を最初から選択状態にする
+    }} 
     className="mt-2 w-full py-2 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-lg border border-indigo-100 flex items-center justify-center gap-1 hover:bg-indigo-100 transition shadow-sm active:scale-95"
   >
     <Plus className="w-3 h-3" /> この内容を他の日にも一括反映する
@@ -1041,6 +1016,59 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
               </button>
             </div>
 
+          </div>
+        )}
+
+        
+        {isBatchModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
+              
+              <div className="p-6 bg-indigo-900 text-white">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold">反映する日程を選択</h3>
+                    <p className="text-xs text-indigo-200 mt-1">選んだすべての日程にコメントの内容を上書きします</p>
+                  </div>
+                  <button onClick={() => setIsBatchModalOpen(false)}><XCircle className="w-6 h-6" /></button>
+                </div>
+                <div className="flex gap-2">
+                  <div className="bg-white/10 px-3 py-1 rounded-lg text-xs border border-white/20">状態: {STATUS_OPTIONS[batchStatus]?.label}</div>
+                  <div className="bg-white/10 px-3 py-1 rounded-lg text-xs border border-white/20 truncate flex-1">理由: {batchComment || '(なし)'}</div>
+                </div>
+              </div>
+
+             
+              <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                <div className="grid grid-cols-3 gap-3">
+                  {visibleEvents.map(event => {
+                    const isSelected = selectedEventIds.has(event.id);
+                    const { dayStr } = getDayInfo(event.date);
+                    return (
+                      <button 
+                        key={event.id}
+                        onClick={() => toggleEventSelection(event.id)}
+                        className={`relative p-3 rounded-2xl border-2 transition-all flex flex-col items-center aspect-square justify-center ${
+                          isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-500'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold">{event.date.slice(5).replace('-', '/')}</span>
+                        <span className="text-xs font-bold">{dayStr}</span>
+                        {isSelected && <CheckCircle2 className="absolute top-1 right-1 w-4 h-4 text-white" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+             
+              <div className="p-6 bg-white border-t grid grid-cols-2 gap-3">
+                <button onClick={() => setIsBatchModalOpen(false)} className="py-3 rounded-xl font-bold bg-gray-100 text-gray-500">キャンセル</button>
+                <button onClick={handleApplyBatch} disabled={selectedEventIds.size === 0 || isSaving} className="py-3 rounded-xl font-bold bg-indigo-600 text-white disabled:opacity-50">
+                  {isSaving ? '保存中...' : `${selectedEventIds.size}件を更新`}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1444,3 +1472,4 @@ export default function App() {
     />
   );
 }
+

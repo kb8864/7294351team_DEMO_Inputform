@@ -1061,9 +1061,30 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
                           isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-500'
                         }`}
                       >
-                        <span className="text-[10px] font-bold">{event.date.slice(5).replace('-', '/')}</span>
-                        <span className="text-xs font-bold">{dayStr}</span>
-                        {isSelected && <CheckCircle2 className="absolute top-1 right-1 w-4 h-4 text-white" />}
+
+                        <div className="flex items-center gap-1 mb-1.5">
+                          <span className="text-xs sm:text-sm font-bold">{event.date.slice(5).replace('-', '/')}</span>
+                          <span className="text-[10px] font-bold">{dayStr}</span>
+                        </div>
+                        
+                        <span className={`text-[8px] sm:text-[9px] mb-1.5 px-1 py-0.5 rounded w-full text-center truncate ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {event.time}
+                        </span>
+                        
+                        <span 
+                          className="text-[9px] sm:text-[10px] font-bold text-center leading-tight w-full"
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                        >
+                          {event.title}
+                        </span>
+                        
+                        {isSelected && (
+                          <div className="absolute -top-2 -right-2 bg-white text-indigo-600 rounded-full border-2 border-indigo-600 shadow-sm">
+                            <CheckCircle2 className="w-4 h-4" />
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -1500,3 +1521,4 @@ export default function App() {
     />
   );
 }
+

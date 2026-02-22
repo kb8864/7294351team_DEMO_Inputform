@@ -1393,15 +1393,29 @@ export default function App() {
   };
 
   const handleUpdateStatus = async (eventId, status) => {
-    if (!user) return;
+    // 出欠状態のコピーを作成
     const newResponses = { ...user.responses, [eventId]: status };
-    setUser({ ...user, responses: newResponses }); 
+    const newComments = { ...(user.comments || {}) };
+    
+    const updates = {
+      [`responses.${eventId}`]: status,
+      updatedAt: serverTimestamp()
+    };
+
+    // 出席が選ばれた場合、その日のコメントだけを空にする
+    if (status === 'present' && newComments[eventId]) {
+      newComments[eventId] = '';
+      updates[`comments.${eventId}`] = ''; // データベース上も空文字で上書き
+    }
+
+    // 画面の表示(State)を更新
+    setUser({ ...user, responses: newResponses, comments: newComments }); 
+
     try {
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), {
-        responses: newResponses,
-        updatedAt: serverTimestamp()
-      });
-    } catch (e) { console.error(e); }
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), updates);
+    } catch (e) { 
+      console.error(e); 
+    }
   };
 
   const handleUpdateComment = async (eventId, comment) => {
@@ -1521,4 +1535,5 @@ export default function App() {
     />
   );
 }
+
 

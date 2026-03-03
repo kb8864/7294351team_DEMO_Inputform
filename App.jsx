@@ -246,13 +246,7 @@ const STATUS_OPTIONS = {
   undecided: { label: '未定', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: HelpCircle },
 };
 
-const STATUS_OPTIONS = {
-  present: { label: '出席', color: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle2 },
-  absent: { label: '欠席', color: 'bg-red-100 text-red-700 border-red-300', icon: XCircle },
-  late: { label: '遅刻/早退', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: HelpCircle },
-  tentative: { label: '未確定', color: 'bg-purple-100 text-purple-700 border-purple-300', icon: HelpCircle },
-  undecided: { label: '未定', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: HelpCircle },
-};
+
 
 const ADMIN_PASSWORD = "729yosa"; 
 
@@ -1543,7 +1537,7 @@ const handleBatchUpdate = async (eventIds, status, comment) => {
       events={events} 
       allData={allData} 
       onUpdateStatus={handleUpdateStatus} 
-      onUpdateComment={handleUpdateComment}
+      onUpdateComment={handleUpdateComment}f
       onBatchUpdate={handleBatchUpdate} // 追加
       onLogout={handleLogout}
       onAddEvents={handleAddEvents}
@@ -1551,6 +1545,7 @@ const handleBatchUpdate = async (eventIds, status, comment) => {
     />
   );
 }
+
 
 
 

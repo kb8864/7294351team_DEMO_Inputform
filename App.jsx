@@ -246,8 +246,6 @@ const STATUS_OPTIONS = {
   undecided: { label: '未定', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: HelpCircle },
 };
 
-
-
 const ADMIN_PASSWORD = "729yosa"; 
 
 // --- Helper Functions ---
@@ -276,8 +274,8 @@ const LS_USER_ID_KEY = `yosakoi_app_user_id_${appId}`;
 // ダルマSVGコンポーネント
 const DarumaIcon = ({ color, className, style }) => {
 const imageSrc = color === 'red' 
-    ? '/images/red_daruma-.png'  // 赤だるまの画像パス
-    : '/images/blue_daruma.png'; // 青だるまの画像パス
+    ? '/images/red_daruma-.png'  
+    : '/images/blue_daruma.png'; 
 
   return (
     <img 
@@ -288,7 +286,6 @@ const imageSrc = color === 'red'
         ...style, 
         objectFit: 'contain' ,
         mixBlendMode: 'multiply'
-        
       }} 
     />
   );
@@ -298,24 +295,23 @@ const imageSrc = color === 'red'
 const DarumaBackground = () => {
   const darumas = useMemo(() => {
     const items = [];
-    const count = 18; // ダルマの数
+    const count = 18; 
 
     for (let i = 0; i < count; i++) {
       const isRed = Math.random() > 0.5;
-      const size = 30 + Math.random() * 50; // 30px ~ 80px
+      const size = 30 + Math.random() * 50; 
       const animationType = ['anim-roll', 'anim-bounce', 'anim-sway'][Math.floor(Math.random() * 3)];
       
       let duration;
       if (animationType === 'anim-bounce') {
-        duration = 1.5 + Math.random() * 1.5; // 1.5秒〜3.0秒 (ぴょんぴょん速く)
+        duration = 1.5 + Math.random() * 1.5; 
       } else if (animationType === 'anim-roll') {
-        duration = 5 + Math.random() * 5;    // 5秒〜10秒 (転がる速度アップ)
+        duration = 5 + Math.random() * 5;    
       } else {
-        duration = 2 + Math.random() * 4;    // 3秒〜7秒 (揺れも少し速く)
+        duration = 2 + Math.random() * 4;    
       }
 
       const delay = Math.random() * 5;
-      
       const top = Math.random() * 90; 
       const left = Math.random() * 90;
 
@@ -328,7 +324,7 @@ const DarumaBackground = () => {
           width: `${size}px`,
           height: `${size}px`,
           top: animationType === 'anim-roll' ? `${Math.random() * 80 + 10}%` : `${top}%`,
-          left: animationType === 'anim-roll' ? '-100px' : `${left}%`, // rollは画面外から
+          left: animationType === 'anim-roll' ? '-100px' : `${left}%`, 
           animationDuration: `${duration}s`,
           animationDelay: `${delay}s`,
         }
@@ -600,8 +596,6 @@ const AdminPanel = ({ currentEvents, onAddEvents, onTogglePublish }) => {
     setSelectedEventIds(new Set());
   };
 
-
-
   const handleSelectAll = () => {
     const allIds = new Set(fetchedEvents.map(e => e.id));
     setSelectedEventIds(allIds);
@@ -721,8 +715,6 @@ const AdminPanel = ({ currentEvents, onAddEvents, onTogglePublish }) => {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-gray-800 text-sm">公開中の日程</h3>
-        
-
         </div>
         <div className="space-y-2">
           {currentEvents.length === 0 ? (
@@ -779,7 +771,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
   const [isSaving, setIsSaving] = useState(false);
   const [selectedComment, setSelectedComment] = useState(null);
 
-  // 追加：一括操作用の新しい状態管理
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [selectedEventIds, setSelectedEventIds] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState('absent');
@@ -812,7 +803,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
     return { ...counts, rate: filteredUsers.length > 0 ? Math.round(((filteredUsers.length - counts.undecided) / filteredUsers.length) * 100) : 0 };
   };
 
-  // 追加：日付をタップした時の選択切り替えロジック
   const toggleEventSelection = (id) => {
     const newSet = new Set(selectedEventIds);
     if (newSet.has(id)) newSet.delete(id);
@@ -820,7 +810,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
     setSelectedEventIds(newSet);
   };
 
-  // 追加：モーダル内の「反映する」ボタンを押した時の処理
   const handleApplyBatch = async () => {
     if (selectedEventIds.size === 0) { alert("日程を選択してください"); return; }
     setIsSaving(true);
@@ -831,7 +820,6 @@ const Dashboard = ({ user, events, allData, onUpdateStatus, onUpdateComment, onB
     setIsSaving(false);
   };
 
-  // ★エラー原因の修正：消えていた関数を復活
   const handleDummySave = () => {
     setIsSaving(true);
     setTimeout(() => {
@@ -1311,14 +1299,16 @@ export default function App() {
           if (docSnap.exists()) {
             const rawItems = docSnap.data().items || [];
             
-            
-//  今日から30日前の日付文字列(YYYY-MM-DD)を計算
+            // 今日から30日前の日付文字列(YYYY-MM-DD)を計算
             const now = new Date();
             const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             const y = thirtyDaysAgo.getFullYear();
             const m = String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0');
             const d = String(thirtyDaysAgo.getDate()).padStart(2, '0');
             const thresholdDateStr = `${y}-${m}-${d}`;
+
+            // 30日前より古い予定を自動で除外する
+            const items = rawItems.filter(item => item.date >= thresholdDateStr);
             
             items.sort((a, b) => new Date(`${a.date} ${a.time.split('-')[0]}`) - new Date(`${b.date} ${b.time.split('-')[0]}`));
             setEvents(items);
@@ -1327,11 +1317,6 @@ export default function App() {
             setEvents([]);
           }
         });
-
-        //  30日前より古い予定を自動で除外する（不要なダミー除外は削除）
-            const items = rawItems.filter(item => item.date >= thresholdDateStr);
-            
-            items.sort((a, b) => new Date(`${a.date} ${a.time.split('-')[0]}`) - new Date(`${b.date} ${b.time.split('-')[0]}`));
 
         // 3. Fetch All Users Data
         const dataRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
@@ -1410,8 +1395,6 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-
-
   const handleUpdateComment = async (eventId, comment) => {
     if (!user) return;
     const newComments = { ...(user.comments || {}), [eventId]: comment };
@@ -1445,7 +1428,10 @@ export default function App() {
     }
   };
 
-const docSnap = await getDoc(eventsRef);
+  const handleAddEvents = async (newEvents) => {
+    try {
+      const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
+      const docSnap = await getDoc(eventsRef);
       let currentItems = [];
       if (docSnap.exists()) {
         currentItems = docSnap.data().items || [];
@@ -1459,7 +1445,7 @@ const docSnap = await getDoc(eventsRef);
       const d = String(thirtyDaysAgo.getDate()).padStart(2, '0');
       const thresholdDateStr = `${y}-${m}-${d}`;
 
-      //  既存のリストから、30日より古いものをあらかじめ消しておく
+      // 既存のリストから、30日より古いものをあらかじめ消しておく
       let updatedItems = currentItems.filter(item => item.date >= thresholdDateStr);
 
       newEvents.forEach(newEvent => {
@@ -1476,7 +1462,7 @@ const docSnap = await getDoc(eventsRef);
 
       await updateDoc(eventsRef, { items: updatedItems });
       // メッセージを少し変更
-      alert(`${newEvents.length}件の予定を更新/追加しました\n`);;
+      alert(`${newEvents.length}件の予定を更新/追加しました\n（1ヶ月以上前の予定は自動削除されました）`);
 
     } catch (e) {
       console.error(e);
@@ -1501,9 +1487,8 @@ const docSnap = await getDoc(eventsRef);
     return <AuthScreen onLogin={handleLogin} />;
   }
 
-  
-// 一括更新ロジック (Firestoreドット記法で最適化)
-const handleBatchUpdate = async (eventIds, status, comment) => {
+  // 一括更新ロジック (Firestoreドット記法で最適化)
+  const handleBatchUpdate = async (eventIds, status, comment) => {
     if (!user || eventIds.length === 0) return;
     const nr = { ...user.responses };
     const nc = { ...(user.comments || {}) };
@@ -1513,7 +1498,6 @@ const handleBatchUpdate = async (eventIds, status, comment) => {
       nr[id] = status; 
       updates[`responses.${id}`] = status; 
       
-
       if (status === 'present') {
         nc[id] = '';
         updates[`comments.${id}`] = '';
@@ -1537,20 +1521,11 @@ const handleBatchUpdate = async (eventIds, status, comment) => {
       events={events} 
       allData={allData} 
       onUpdateStatus={handleUpdateStatus} 
-      onUpdateComment={handleUpdateComment}f
-      onBatchUpdate={handleBatchUpdate} // 追加
+      onUpdateComment={handleUpdateComment}
+      onBatchUpdate={handleBatchUpdate}
       onLogout={handleLogout}
       onAddEvents={handleAddEvents}
       onTogglePublish={handleTogglePublish}
     />
   );
 }
-
-
-
-
-
-
-
-
-

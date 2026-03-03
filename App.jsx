@@ -1281,7 +1281,7 @@ export default function App() {
 
   useEffect(() => {
     const savedUserId = localStorage.getItem(LS_USER_ID_KEY);
-    
+    f
     const initApp = async () => {
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(auth, __initial_auth_token);
@@ -1438,7 +1438,7 @@ export default function App() {
         currentItems = docSnap.data().items || [];
       }
 
-      / データベース保存時にも日本時間で先月以前のデータを削除
+      // データベース保存時にも日本時間で先月以前のデータを削除
       const jstDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
       const y = jstDate.getFullYear();
       const m = String(jstDate.getMonth() + 1).padStart(2, '0');
@@ -1528,4 +1528,5 @@ export default function App() {
     />
   );
 }
+
 

@@ -246,7 +246,15 @@ const STATUS_OPTIONS = {
   undecided: { label: '未定', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: HelpCircle },
 };
 
-const ADMIN_PASSWORD = "yosakoi"; 
+const STATUS_OPTIONS = {
+  present: { label: '出席', color: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle2 },
+  absent: { label: '欠席', color: 'bg-red-100 text-red-700 border-red-300', icon: XCircle },
+  late: { label: '遅刻/早退', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: HelpCircle },
+  tentative: { label: '未確定', color: 'bg-purple-100 text-purple-700 border-purple-300', icon: HelpCircle },
+  undecided: { label: '未定', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: HelpCircle },
+};
+
+const ADMIN_PASSWORD = "729yosa"; 
 
 // --- Helper Functions ---
 const getDayInfo = (dateString) => {
@@ -273,20 +281,22 @@ const LS_USER_ID_KEY = `yosakoi_app_user_id_${appId}`;
 
 // ダルマSVGコンポーネント
 const DarumaIcon = ({ color, className, style }) => {
-  const mainColor = color === 'red' ? '#ef4444' : '#3b82f6'; // Tailwind red-500 / blue-500
+const imageSrc = color === 'red' 
+    ? '/images/red_daruma-.png'  // 赤だるまの画像パス
+    : '/images/blue_daruma.png'; // 青だるまの画像パス
+
   return (
-    <svg 
-      viewBox="0 0 100 100" 
+    <img 
+      src={imageSrc} 
+      alt={`${color} daruma`}
       className={`daruma-icon ${className}`} 
-      style={style}
-    >
-      <path d="M50 95 C25 95 10 80 10 55 C10 30 25 5 50 5 C75 5 90 30 90 55 C90 80 75 95 50 95 Z" fill={mainColor} />
-      <circle cx="50" cy="45" r="30" fill="white" />
-      <circle cx="38" cy="45" r="4" fill="black" />
-      <circle cx="62" cy="45" r="4" fill="black" />
-      <path d="M35 55 Q50 65 65 55" stroke="black" strokeWidth="2" fill="none" opacity="0.3" />
-      <path d="M30 75 Q50 90 70 75" stroke="gold" strokeWidth="3" fill="none" />
-    </svg>
+      style={{ 
+        ...style, 
+        objectFit: 'contain' ,
+        mixBlendMode: 'multiply'
+        
+      }} 
+    />
   );
 };
 
@@ -305,7 +315,7 @@ const DarumaBackground = () => {
       if (animationType === 'anim-bounce') {
         duration = 1.5 + Math.random() * 1.5; // 1.5秒〜3.0秒 (ぴょんぴょん速く)
       } else if (animationType === 'anim-roll') {
-        duration = 7 + Math.random() * 5;    // 5秒〜10秒 (転がる速度アップ)
+        duration = 5 + Math.random() * 5;    // 5秒〜10秒 (転がる速度アップ)
       } else {
         duration = 2 + Math.random() * 4;    // 3秒〜7秒 (揺れも少し速く)
       }
@@ -596,18 +606,7 @@ const AdminPanel = ({ currentEvents, onAddEvents, onTogglePublish }) => {
     setSelectedEventIds(new Set());
   };
 
-  const handleDeleteAllEvents = async () => {
-    if (window.confirm("現在公開されているすべての予定を削除しますか？\n（この操作は元に戻せません）")) {
-      try {
-        const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
-        await setDoc(eventsRef, { items: [] }); 
-        alert("すべての予定を削除しました。");
-      } catch (e) {
-        console.error(e);
-        alert("削除に失敗しました。");
-      }
-    }
-  };
+
 
   const handleSelectAll = () => {
     const allIds = new Set(fetchedEvents.map(e => e.id));
@@ -728,14 +727,8 @@ const AdminPanel = ({ currentEvents, onAddEvents, onTogglePublish }) => {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-gray-800 text-sm">公開中の日程</h3>
-          {currentEvents.length > 0 && (
-            <button 
-              onClick={handleDeleteAllEvents}
-              className="text-xs text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition active:scale-95"
-            >
-              全件削除
-            </button>
-          )}
+        
+
         </div>
         <div className="space-y-2">
           {currentEvents.length === 0 ? (
@@ -1394,17 +1387,16 @@ export default function App() {
 
   const handleUpdateStatus = async (eventId, status) => {
     if (!user) return;
-    // 出欠状態のコピーを作成
     const newResponses = { ...user.responses, [eventId]: status };
     const newComments = { ...(user.comments || {}) };
     
+    // データベース更新用のデータ（安全なドット記法を使用）
     const updates = {
       [`responses.${eventId}`]: status,
       updatedAt: serverTimestamp()
     };
 
-    // 出席が選ばれた場合、その日のコメントだけを空にする
-if (status === 'present') {
+    if (status === 'present') {
       newComments[eventId] = '';
       updates[`comments.${eventId}`] = ''; 
     }
@@ -1416,23 +1408,19 @@ if (status === 'present') {
     } catch (e) { console.error(e); }
   };
 
+
+
   const handleUpdateComment = async (eventId, comment) => {
     if (!user) return;
-    
-    // すでにステータスが「参加」になっている場合は、誤ってコメントが復活するのを防ぐ
-    if (user.responses?.[eventId] === 'present') return;
-
     const newComments = { ...(user.comments || {}), [eventId]: comment };
     setUser({ ...user, comments: newComments }); 
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', user.uid), {
-        [`comments.${eventId}`]: comment,
+        comments: newComments,
         updatedAt: serverTimestamp()
       });
     } catch (e) { console.error(e); }
   };
-
-
 
   const handleTogglePublish = async (eventId) => {
     try {
@@ -1505,7 +1493,7 @@ if (status === 'present') {
   }
 
   
-// 一括更新ロジック 
+// 一括更新ロジック (Firestoreドット記法で最適化)
 const handleBatchUpdate = async (eventIds, status, comment) => {
     if (!user || eventIds.length === 0) return;
     const nr = { ...user.responses };
@@ -1516,12 +1504,11 @@ const handleBatchUpdate = async (eventIds, status, comment) => {
       nr[id] = status; 
       updates[`responses.${id}`] = status; 
       
-      // 一括入力モードで「参加」にした場合も、すべての対象日のコメントを強制的に空にする
+
       if (status === 'present') {
         nc[id] = '';
         updates[`comments.${id}`] = '';
       } 
-      // 参加以外で、コメントが入力されていればそれをセット
       else if (comment !== undefined && comment !== null) { 
         nc[id] = comment; 
         updates[`comments.${id}`] = comment; 
@@ -1549,6 +1536,10 @@ const handleBatchUpdate = async (eventIds, status, comment) => {
     />
   );
 }
+
+
+
+
 
 
 

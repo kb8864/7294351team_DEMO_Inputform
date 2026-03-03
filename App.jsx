@@ -1281,7 +1281,7 @@ export default function App() {
 
   useEffect(() => {
     const savedUserId = localStorage.getItem(LS_USER_ID_KEY);
-    f
+    
     const initApp = async () => {
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(auth, __initial_auth_token);
@@ -1528,5 +1528,6 @@ export default function App() {
     />
   );
 }
+
 
 

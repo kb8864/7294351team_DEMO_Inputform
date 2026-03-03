@@ -1299,15 +1299,16 @@ export default function App() {
           if (docSnap.exists()) {
             const rawItems = docSnap.data().items || [];
             
-            // 今日から30日前の日付文字列(YYYY-MM-DD)を計算
-            const now = new Date();
-            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            const y = thirtyDaysAgo.getFullYear();
-            const m = String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0');
-            const d = String(thirtyDaysAgo.getDate()).padStart(2, '0');
-            const thresholdDateStr = `${y}-${m}-${d}`;
+            // 日本時間(JST)で現在の日時を取得
+            const jstDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+            
+            // 「月が変わったら先月分を一掃する」ため、当月の1日を基準に設定
+            // (例: 3月3日なら "2026-03-01" となり、2月以前の予定は除外される)
+            const y = jstDate.getFullYear();
+            const m = String(jstDate.getMonth() + 1).padStart(2, '0');
+            const thresholdDateStr = `${y}-${m}-01`;;
 
-            // 30日前より古い予定を自動で除外する
+            // 先月以前の予定を自動で除外する
             const items = rawItems.filter(item => item.date >= thresholdDateStr);
             
             items.sort((a, b) => new Date(`${a.date} ${a.time.split('-')[0]}`) - new Date(`${b.date} ${b.time.split('-')[0]}`));
@@ -1437,15 +1438,13 @@ export default function App() {
         currentItems = docSnap.data().items || [];
       }
 
-      // データベース保存時にも古いデータを削除して掃除する
-      const now = new Date();
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const y = thirtyDaysAgo.getFullYear();
-      const m = String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0');
-      const d = String(thirtyDaysAgo.getDate()).padStart(2, '0');
-      const thresholdDateStr = `${y}-${m}-${d}`;
+      / データベース保存時にも日本時間で先月以前のデータを削除
+      const jstDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+      const y = jstDate.getFullYear();
+      const m = String(jstDate.getMonth() + 1).padStart(2, '0');
+      const thresholdDateStr = `${y}-${m}-01`;;
 
-      // 既存のリストから、30日より古いものをあらかじめ消しておく
+      // 既存のリストから、当月1日より古いもの（先月以前の予定）をあらかじめ消しておく
       let updatedItems = currentItems.filter(item => item.date >= thresholdDateStr);
 
       newEvents.forEach(newEvent => {
@@ -1461,8 +1460,8 @@ export default function App() {
       });
 
       await updateDoc(eventsRef, { items: updatedItems });
-      // メッセージを少し変更
-      alert(`${newEvents.length}件の予定を更新/追加しました\n（1ヶ月以上前の予定は自動削除されました）`);
+      // アラートのメッセージも変更しておきます
+      alert(`${newEvents.length}件の予定を更新/追加しました\n（先月以前の予定は自動削除されました）`);
 
     } catch (e) {
       console.error(e);
@@ -1529,3 +1528,4 @@ export default function App() {
     />
   );
 }
+

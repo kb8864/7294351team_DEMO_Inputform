@@ -1318,10 +1318,13 @@ export default function App() {
             const rawItems = docSnap.data().items || [];
             
             
-            const items = rawItems.filter(item => 
-              item.date !== '2024-05-18' && 
-              !item.id.startsWith('evt-')
-            );
+//  今日から30日前の日付文字列(YYYY-MM-DD)を計算
+            const now = new Date();
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const y = thirtyDaysAgo.getFullYear();
+            const m = String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0');
+            const d = String(thirtyDaysAgo.getDate()).padStart(2, '0');
+            const thresholdDateStr = `${y}-${m}-${d}`;
             
             items.sort((a, b) => new Date(`${a.date} ${a.time.split('-')[0]}`) - new Date(`${b.date} ${b.time.split('-')[0]}`));
             setEvents(items);
@@ -1330,6 +1333,11 @@ export default function App() {
             setEvents([]);
           }
         });
+
+        //  30日前より古い予定を自動で除外する（不要なダミー除外は削除）
+            const items = rawItems.filter(item => item.date >= thresholdDateStr);
+            
+            items.sort((a, b) => new Date(`${a.date} ${a.time.split('-')[0]}`) - new Date(`${b.date} ${b.time.split('-')[0]}`));
 
         // 3. Fetch All Users Data
         const dataRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
@@ -1443,17 +1451,23 @@ export default function App() {
     }
   };
 
-  const handleAddEvents = async (newEvents) => {
-    try {
-      const eventsRef = doc(db, 'artifacts', appId, 'public', 'data', 'master', 'events');
-      
-      const docSnap = await getDoc(eventsRef);
+const docSnap = await getDoc(eventsRef);
       let currentItems = [];
       if (docSnap.exists()) {
         currentItems = docSnap.data().items || [];
       }
 
-      let updatedItems = [...currentItems];
+      // データベース保存時にも古いデータを削除して掃除する
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const y = thirtyDaysAgo.getFullYear();
+      const m = String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0');
+      const d = String(thirtyDaysAgo.getDate()).padStart(2, '0');
+      const thresholdDateStr = `${y}-${m}-${d}`;
+
+      //  既存のリストから、30日より古いものをあらかじめ消しておく
+      let updatedItems = currentItems.filter(item => item.date >= thresholdDateStr);
+
       newEvents.forEach(newEvent => {
         const index = updatedItems.findIndex(item => item.id === newEvent.id);
         if (index > -1) {
@@ -1467,7 +1481,8 @@ export default function App() {
       });
 
       await updateDoc(eventsRef, { items: updatedItems });
-      alert(`${newEvents.length}件の予定を更新/追加しました`);
+      // メッセージを少し変更
+      alert(`${newEvents.length}件の予定を更新/追加しました\n`);;
 
     } catch (e) {
       console.error(e);
@@ -1536,6 +1551,7 @@ const handleBatchUpdate = async (eventIds, status, comment) => {
     />
   );
 }
+
 
 
 
